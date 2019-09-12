@@ -16,6 +16,7 @@ package cop5556fa19;
 public class Token {
 	public enum Kind {
 		NAME,
+		NUM_LIT,
 		INTLIT,
 		KW_and,
 		KW_break,
