@@ -24,7 +24,7 @@ import java.io.Reader;
 public class Scanner {
 
 	public enum State {
-		START, HAVE_EQ, HAVE_DIV, HAVE_XOR, HAVE_REL_LT, HAVE_REL_GT, HAVE_COLON, HAVE_DOT, IN_DOUBLE_QUOTES, IN_SINGLE_QUOTES, IN_NUMLIT, IN_IDENT
+		START, HAVE_MINUS, HAVE_EQ, HAVE_DIV, HAVE_XOR, HAVE_REL_LT, HAVE_REL_GT, HAVE_COLON, HAVE_DOT, IN_DOUBLE_QUOTES, IN_SINGLE_QUOTES, IN_NUMLIT, IN_IDENT, IN_COMMENT
 	}
 	Reader r;
 
@@ -75,7 +75,7 @@ public class Scanner {
 				//some sort of for loop
 				switch (ch) {
 				case '+': {t = new Token(OP_PLUS, "+", pos, line);getChar();}break;
-				case '-': {t = new Token(OP_MINUS, "-", pos, line);getChar();}break;//NUM_LIT!!!!!!!
+				case '-': {state = State.HAVE_MINUS; sb.append((char)ch); getChar();}break;
 				case '*': {t = new Token(OP_TIMES, "*", pos, line);getChar();}break;
 				case '/': {state = State.HAVE_DIV; getChar();}break;
 				case '%': {t = new Token(OP_MOD, "%", pos, line);getChar();}break;
@@ -120,6 +120,28 @@ public class Scanner {
 				}
 				} // switch (ch)
 			} break;      // case START
+			
+			case HAVE_MINUS: {
+				if(ch == '-') {
+					state = State.IN_COMMENT;
+					sb.append((char)ch);
+					getChar();
+				}else {
+					t = new Token(OP_MINUS, "-", pos, line);
+					sb = new StringBuilder("");
+				}
+			} break;
+			
+			case IN_COMMENT: {
+				if(ch == -1) {
+					sb = new StringBuilder("");
+					getChar();
+					t = getNext();
+				}else {
+					sb.append((char)ch);
+					getChar();
+				}
+			} break;
 			
 			case HAVE_DIV: {
 				if(ch == '/') {
@@ -254,11 +276,12 @@ public class Scanner {
 				if (Character.isDigit(ch)) {
 					sb.append((char)ch);
 					getChar();
-				}else if(ch == -1){
+				}else /*if(ch == -1)*/{
 					t = new Token(INTLIT, sb.toString(), pos, line); sb = new StringBuilder("");
-				} else {
-					throw new LexicalException("Invalid number at Line: "+line+" Pos: "+pos);
-				}
+				} /*
+					 * else { throw new
+					 * LexicalException("Invalid number at Line: "+line+" Pos: "+pos); }
+					 */
 			}  break;
 			
 			case IN_IDENT: {
