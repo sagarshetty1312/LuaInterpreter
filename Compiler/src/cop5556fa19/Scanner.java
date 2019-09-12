@@ -24,7 +24,7 @@ import java.io.Reader;
 public class Scanner {
 
 	public enum State {
-		START, HAVE_EQ, HAVE_DIV, HAVE_XOR, HAVE_REL_LT, HAVE_REL_GT, HAVE_COLON, HAVE_DOT, IN_NUMLIT, IN_IDENT
+		START, HAVE_EQ, HAVE_DIV, HAVE_XOR, HAVE_REL_LT, HAVE_REL_GT, HAVE_COLON, HAVE_DOT, IN_DOUBLE_QUOTES, IN_SINGLE_QUOTES, IN_NUMLIT, IN_IDENT
 	}
 	Reader r;
 
@@ -96,7 +96,9 @@ public class Scanner {
 				case ':': {state = State.HAVE_COLON; getChar();}break;
 				case ';': {t = new Token(SEMI, ";", pos, line);getChar();}break;
 				case ',': {t = new Token(COMMA, ",", pos, line);getChar();}break;
-				case '.': {state = State.HAVE_DOT; sb.append("."); getChar();}break;//DOT
+				case '.': {state = State.HAVE_DOT; sb.append("."); getChar();}break;
+				case '"': {state = State.IN_DOUBLE_QUOTES; getChar();}break;//String literal
+				case '\'': {state = State.IN_SINGLE_QUOTES; getChar();}break;//String literal
 
 				case '0': {t = new Token(INTLIT,"0",pos,line);getChar();}break;
 				case  -1: {t = new Token(EOF, "EOF", pos, line);break;
@@ -186,12 +188,58 @@ public class Scanner {
 					getChar();
 				}else {
 					switch (sb.toString()) {
-					case "...": t = new Token(DOTDOTDOT, "...", pos, line); break;
-					case "..": t = new Token(DOTDOT, "..", pos, line); break;
-					default: t = new Token(DOT, ".", pos, line); break;
-				}
+						case "...": t = new Token(DOTDOTDOT, "...", pos, line); break;
+						case "..": t = new Token(DOTDOT, "..", pos, line); break;
+						default: t = new Token(DOT, ".", pos, line); break;
+					}
 				}
 			} break;
+			
+			case IN_DOUBLE_QUOTES: {
+				switch (ch) {
+					case -1: throw new LexicalException("Could not find matching quote for \'\"\' at Line: "+line+" Pos: "+pos);
+					case '\\': { getChar();
+						switch (ch) {
+							case 'a': {sb.append(ch); getChar();} break;
+							case 'b': {sb.append(ch); getChar();} break;
+							case 'f': {sb.append(ch); getChar();} break;
+							case 'n': {sb.append(ch); getChar();} break;
+							case 'r': {sb.append(ch); getChar();} break;
+							case 't': {sb.append(ch); getChar();} break;
+							case 'v':  {sb.append(ch); getChar();} break;
+							case '\\': {sb.append(ch); getChar();} break;
+							case '"': {sb.append(ch); getChar();} break;
+							case '\'': {sb.append(ch); getChar();} break;
+							default: throw new LexicalException("Invalid escape sequence at Line: "+line+" Pos: "+pos+" (valid ones are  \\b  \\t  \\n  \\f  \\r  \\\"  \\'  \\\\ )");
+						}
+					} break;
+					case '"': {t = new Token(STRINGLIT, sb.toString(), pos, line); getChar();}break;
+					default: {sb.append(ch); getChar();} break;
+				}
+			} break; //case IN_DOUBLE_QUOTES
+			
+			case IN_SINGLE_QUOTES: {
+				switch (ch) {
+					case -1: throw new LexicalException("Could not find matching quote for \"\'\" at Line: "+line+" Pos: "+pos);
+					case '\\': { getChar();
+						switch (ch) {
+							case 'a': {sb.append(ch); getChar();} break;
+							case 'b': {sb.append(ch); getChar();} break;
+							case 'f': {sb.append(ch); getChar();} break;
+							case 'n': {sb.append(ch); getChar();} break;
+							case 'r': {sb.append(ch); getChar();} break;
+							case 't': {sb.append(ch); getChar();} break;
+							case 'v':  {sb.append(ch); getChar();} break;
+							case '\\': {sb.append(ch); getChar();} break;
+							case '"': {sb.append(ch); getChar();} break;
+							case '\'': {sb.append(ch); getChar();} break;
+							default: throw new LexicalException("Invalid escape sequence at Line: "+line+" Pos: "+pos+" (valid ones are  \\b  \\t  \\n  \\f  \\r  \\\"  \\'  \\\\ )");
+						}
+					} break;
+					case '\'': {t = new Token(STRINGLIT, sb.toString(), pos, line); getChar();}break;
+					default: {sb.append(ch); getChar();} break;
+				}
+			} break; //case IN_SINGLE_QUOTES
 			
 			case IN_NUMLIT: {  }  break;
 			case IN_IDENT: {
