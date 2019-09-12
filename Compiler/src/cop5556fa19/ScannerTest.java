@@ -80,10 +80,8 @@ class ScannerTest {
 	void test2() throws Exception {
 		String file = "testInputFiles\\test2.input"; 
 		Reader r = new BufferedReader(new FileReader(file));
-		Scanner s = new Scanner(r);
-        assertThrows(LexicalException.class, ()->{
-		   s.getNext();
-        });
+		Scanner s = new Scanner(r);Token t;
+		show(t = s.getNext());
 	}
 	
 
@@ -111,6 +109,16 @@ class ScannerTest {
 		show(t = s.getNext());
 		assertEquals(t.kind,REL_EQEQ);
 		assertEquals(t.text,"==");
+	}
+	
+	@Test
+	void test4() throws Exception {
+		Reader r = new StringReader("\"What's happening \'Yo\'\"");
+		Scanner s = new Scanner(r);
+		Token t;
+		show(t= s.getNext());
+		//System.out.println(t.toString());
+		assertEquals(t.text,"What's happening 'Yo'");
 	}
 
 }

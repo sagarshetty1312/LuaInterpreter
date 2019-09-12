@@ -59,7 +59,7 @@ public class Scanner {
 
 	public Token getNext() throws Exception {
 		Token t = null;
-		StringBuilder sb = null;//for token text
+		StringBuilder sb = new StringBuilder("");//for token text
 		int pos = -1;
 		int line = -1;
 		State state = State.START;
@@ -75,7 +75,7 @@ public class Scanner {
 				//some sort of for loop
 				switch (ch) {
 				case '+': {t = new Token(OP_PLUS, "+", pos, line);getChar();}break;
-				case '-': {t = new Token(OP_MINUS, "-", pos, line);getChar();}break;
+				case '-': {t = new Token(OP_MINUS, "-", pos, line);getChar();}break;//NUM_LIT!!!!!!!
 				case '*': {t = new Token(OP_TIMES, "*", pos, line);getChar();}break;
 				case '/': {state = State.HAVE_DIV; getChar();}break;
 				case '%': {t = new Token(OP_MOD, "%", pos, line);getChar();}break;
@@ -106,7 +106,6 @@ public class Scanner {
 				default: {
 					if (Character.isDigit(ch)) {
 						state = State.IN_NUMLIT;
-						sb = new StringBuilder();
 						sb.append((char)ch);
 						getChar();
 					}
@@ -184,13 +183,13 @@ public class Scanner {
 			
 			case HAVE_DOT: {
 				if(ch == '.') {
-					sb.append(ch);
+					sb.append((char)ch);
 					getChar();
 				}else {
 					switch (sb.toString()) {
-						case "...": t = new Token(DOTDOTDOT, "...", pos, line); break;
-						case "..": t = new Token(DOTDOT, "..", pos, line); break;
-						default: t = new Token(DOT, ".", pos, line); break;
+						case "...":{t = new Token(DOTDOTDOT, "...", pos, line); sb = new StringBuilder("");} break;
+						case "..": {t = new Token(DOTDOT, "..", pos, line); sb = new StringBuilder("");} break;
+						default: {t = new Token(DOT, ".", pos, line); sb = new StringBuilder("");} break;
 					}
 				}
 			} break;
@@ -200,48 +199,68 @@ public class Scanner {
 					case -1: throw new LexicalException("Could not find matching quote for \'\"\' at Line: "+line+" Pos: "+pos);
 					case '\\': { getChar();
 						switch (ch) {
-							case 'a': {sb.append(ch); getChar();} break;
-							case 'b': {sb.append(ch); getChar();} break;
-							case 'f': {sb.append(ch); getChar();} break;
-							case 'n': {sb.append(ch); getChar();} break;
-							case 'r': {sb.append(ch); getChar();} break;
-							case 't': {sb.append(ch); getChar();} break;
-							case 'v':  {sb.append(ch); getChar();} break;
-							case '\\': {sb.append(ch); getChar();} break;
-							case '"': {sb.append(ch); getChar();} break;
-							case '\'': {sb.append(ch); getChar();} break;
+							case 'a': {sb.append((char)ch); getChar();} break;
+							case 'b': {sb.append((char)ch); getChar();} break;
+							case 'f': {sb.append((char)ch); getChar();} break;
+							case 'n': {sb.append((char)ch); getChar();} break;
+							case 'r': {sb.append((char)ch); getChar();} break;
+							case 't': {sb.append((char)ch); getChar();} break;
+							case 'v':  {sb.append((char)ch); getChar();} break;
+							case '\\': {sb.append((char)ch); getChar();} break;
+							case '"': {sb.append((char)ch); getChar();} break;
+							case '\'': {sb.append((char)ch); getChar();} break;
 							default: throw new LexicalException("Invalid escape sequence at Line: "+line+" Pos: "+pos+" (valid ones are  \\b  \\t  \\n  \\f  \\r  \\\"  \\'  \\\\ )");
 						}
 					} break;
-					case '"': {t = new Token(STRINGLIT, sb.toString(), pos, line); getChar();}break;
-					default: {sb.append(ch); getChar();} break;
+					case '"': {
+						sb.append((char)ch);
+						t = new Token(STRINGLIT, sb.toString(), pos, line);
+						sb = new StringBuilder("");
+						getChar();
+					} break;
+					default: {sb.append((char)ch); getChar();} break;
 				}
 			} break; //case IN_DOUBLE_QUOTES
 			
 			case IN_SINGLE_QUOTES: {
 				switch (ch) {
-					case -1: throw new LexicalException("Could not find matching quote for \"\'\" at Line: "+line+" Pos: "+pos);
+					case -1: throw new LexicalException("Could not find matching quote for \"\'\" at Line: "+line+" Pos: "+(pos-sb.length()));
 					case '\\': { getChar();
 						switch (ch) {
-							case 'a': {sb.append(ch); getChar();} break;
-							case 'b': {sb.append(ch); getChar();} break;
-							case 'f': {sb.append(ch); getChar();} break;
-							case 'n': {sb.append(ch); getChar();} break;
-							case 'r': {sb.append(ch); getChar();} break;
-							case 't': {sb.append(ch); getChar();} break;
-							case 'v':  {sb.append(ch); getChar();} break;
-							case '\\': {sb.append(ch); getChar();} break;
-							case '"': {sb.append(ch); getChar();} break;
-							case '\'': {sb.append(ch); getChar();} break;
+							case 'a': {sb.append((char)ch); getChar();} break;
+							case 'b': {sb.append((char)ch); getChar();} break;
+							case 'f': {sb.append((char)ch); getChar();} break;
+							case 'n': {sb.append((char)ch); getChar();} break;
+							case 'r': {sb.append((char)ch); getChar();} break;
+							case 't': {sb.append((char)ch); getChar();} break;
+							case 'v':  {sb.append((char)ch); getChar();} break;
+							case '\\': {sb.append((char)ch); getChar();} break;
+							case '"': {sb.append((char)ch); getChar();} break;
+							case '\'': {sb.append((char)ch); getChar();} break;
 							default: throw new LexicalException("Invalid escape sequence at Line: "+line+" Pos: "+pos+" (valid ones are  \\b  \\t  \\n  \\f  \\r  \\\"  \\'  \\\\ )");
 						}
 					} break;
-					case '\'': {t = new Token(STRINGLIT, sb.toString(), pos, line); getChar();}break;
-					default: {sb.append(ch); getChar();} break;
+					case '\'': {
+						sb.append((char)ch);
+						t = new Token(STRINGLIT, sb.toString(), pos, line);
+						sb = new StringBuilder("");
+						getChar();
+					} break;
+					default: {sb.append((char)ch); getChar();} break;
 				}
 			} break; //case IN_SINGLE_QUOTES
 			
-			case IN_NUMLIT: {  }  break;
+			case IN_NUMLIT: {
+				if (Character.isDigit(ch)) {
+					sb.append((char)ch);
+					getChar();
+				}else if(ch == -1){
+					t = new Token(INTLIT, sb.toString(), pos, line); sb = new StringBuilder("");
+				} else {
+					throw new LexicalException("Invalid number at Line: "+line+" Pos: "+pos);
+				}
+			}  break;
+			
 			case IN_IDENT: {
 				if (Character.isJavaIdentifierPart(ch)) {
 					sb.append((char)ch);
@@ -257,13 +276,6 @@ public class Scanner {
 			}//switch(state)
 		} //while
 		return t;
-
-
-		//replace this code.  Just for illustration
-		/*
-		 * if (r.read() == -1) { return new Token(EOF,"eof",0,0);} throw new
-		 * LexicalException("Useful error message");
-		 */
 	}
 
 }
