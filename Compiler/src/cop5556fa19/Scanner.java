@@ -24,7 +24,7 @@ import java.io.Reader;
 public class Scanner {
 
 	public enum State {
-		START, HAVE_EQ, IN_NUMLIT, IN_IDENT
+		START, HAVE_EQ, HAVE_REL_GT, HAVE_REL_LT, IN_NUMLIT, IN_IDENT
 	}
 	Reader r;
 
@@ -35,7 +35,7 @@ public class Scanner {
 
 	int currPos;
 	int currLine;
-
+	int nextchar = -2;
 	int ch;
 
 	void getChar() throws IOException {
@@ -54,12 +54,18 @@ public class Scanner {
 
 	public Token getNext() throws Exception {
 		Token t = null;
-		StringBuilder sb;//for token text
+		StringBuilder sb = null;//for token text
 		int pos = -1;
 		int line = -1;
 		State state = State.START;
-		//ch = r.read();
-	
+		if(nextchar == -2) {
+			ch = r.read();			
+		}
+		else {
+			ch = nextchar;
+			nextchar = -2;
+		}
+
 
 		while (t==null) {
 			switch (state) {
@@ -70,50 +76,79 @@ public class Scanner {
 				line = currLine;
 				switch (ch) {
 				case '+': {t = new Token(OP_PLUS, "+", pos, line);getChar();}break;
-				case '*': {t = new Token(OP_TIMES, "*", pos, line);getChar();}break;        
-				case '=': {state = State.HAVE_EQ; getChar();}break;
-				case '0': {t = new Token(NUM_LIT,"0",pos,line);getChar();}break;
-				case  -1: {t = new Token(EOF, "EOF", pos, line); break;}
+				case '-': {t = new Token(OP_MINUS, "-", pos, line);getChar();}break;
+				case '*': {t = new Token(OP_TIMES, "*", pos, line);getChar();}break;
+				//case '/': {state = State.HAVE_EQ; getChar();}break; //OP_DIV
+				case '%': {t = new Token(OP_MOD, "%", pos, line);getChar();}break;
+				case '^': {t = new Token(OP_POW, "^", pos, line);getChar();}break;
+				case '#': {t = new Token(OP_HASH, "#", pos, line);getChar();}break;
+				case '&': {t = new Token(BIT_AMP, "&", pos, line);getChar();}break;
+				//case '~': {state = State.HAVE_EQ; getChar();}break; //BIT_XOR
+				case '|': {t = new Token(BIT_OR, "|", pos, line);getChar();}break;
+				//case '<': {state = State.HAVE_EQ; getChar();}break; //REL_LT
+				//case '>': {state = State.HAVE_EQ; getChar();}break; //REL_GT
+				//case '=': {state = State.HAVE_EQ; getChar();}break;
+				case '(': {t = new Token(LPAREN, "(", pos, line);getChar();}break;
+				case ')': {t = new Token(RPAREN, ")", pos, line);getChar();}break;
+				case '{': {t = new Token(LCURLY, "{", pos, line);getChar();}break;
+				case '}': {t = new Token(RCURLY, "}", pos, line);getChar();}break;
+				case '[': {t = new Token(LSQUARE, "[", pos, line);getChar();}break;
+				case ']': {t = new Token(RSQUARE, "]", pos, line);getChar();}break;
+				//case ':': {state = State.HAVE_EQ; getChar();}break;COLON
+				case ';': {t = new Token(SEMI, ";", pos, line);getChar();}break;
+				case ',': {t = new Token(COMMA, ",", pos, line);getChar();}break;
+				//case '.': {state = State.HAVE_EQ; getChar();}break;//DOT
+
+				case '0': {t = new Token(INTLIT,"0",pos,line);getChar();}break;
+				case  -1: {t = new Token(EOF, "EOF", pos, line); 
+				//throw new LexicalException("Useful error message");
+				break;
+				}
 				default: {
 					if (Character.isDigit(ch)) {
-						state = State.IN_DIGIT; 		
+						state = State.IN_NUMLIT;
 						sb = new StringBuilder();
 						sb.append((char)ch);
 						getChar();
-					} 
+					}
 					else if (Character.isJavaIdentifierStart(ch)) { 
 						//Will tell us if it is a lower case letter, upper case letter, dollar sign or underscore
 						state = State.IN_IDENT; //Corresponding part is Java part.
 						sb = new StringBuilder();
 						sb.append((char)ch);
 						getChar();
-					} 
-					else { error(….);  }
+					}
+					else {throw new LexicalException("Invalid character at Line: "+line+" Pos: "+pos);  }
 				}
 				} // switch (ch)
 			} break;      // case START
-			case IN_NUMLIT: { ... }  break;
-			case HAVE_EQ: {...} break;
-			case IN_IDENT: {	
+
+			case HAVE_EQ: {
+
+			} break;
+			case IN_NUMLIT: {  }  break;
+			case IN_IDENT: {
 				if (Character.isJavaIdentifierPart(ch)) {
 					sb.append((char)ch);
 					getChar();
 				} else {
 					//we are done building the ident.  Create Token
 					//if we had keywords, we would check for that here
-					t = new Token(Ident,sb.toString(), pos, line));
+					t = new Token(NAME,sb.toString(), pos, line);
 				}
 			}break;
 
-			default error(...);
+			//default error(...);
 			}//switch(state)
 		} //while
-		//return t;
+		return t;
 
 
 		//replace this code.  Just for illustration
-		if (r.read() == -1) { return new Token(EOF,"eof",0,0);}
-		throw new LexicalException("Useful error message");
+		/*
+		 * if (r.read() == -1) { return new Token(EOF,"eof",0,0);} throw new
+		 * LexicalException("Useful error message");
+		 */
 	}
 
 }
