@@ -162,7 +162,7 @@ public class Scanner {
 						sb.append((char)ch);
 						getChar();
 					}
-					else if (Character.isJavaIdentifierStart(ch)) { 
+					else if (Character.isJavaIdentifierStart(ch)) {
 						//Will tell us if it is a lower case letter, upper case letter, dollar sign or underscore
 						state = State.IN_IDENT; //Corresponding part is Java part.
 						sb = new StringBuilder();
@@ -209,7 +209,7 @@ public class Scanner {
 
 			case HAVE_XOR: {
 				if(ch == '=') {
-					t = new Token(REL_NOTEQ, "=~", pos, line);
+					t = new Token(REL_NOTEQ, "~=", pos, line);
 					getChar();
 				}else {
 					if((ch == 10) || (ch == 13)) line--;
@@ -266,6 +266,7 @@ public class Scanner {
 			case HAVE_DOT: {
 				if(ch == '.') {
 					sb.append((char)ch);
+					if(sb.toString().equals("...")) {t = new Token(DOTDOTDOT, "...", pos, line); sb = new StringBuilder("");}
 					getChar();
 				}else {
 					if((ch == 10) || (ch == 13)) line--;
@@ -286,15 +287,15 @@ public class Scanner {
 				case '\\': {
 					getChar();
 					switch (ch) {
-					case 'a': {sb.append((char)ch); getChar();} break;
-					case 'b': {sb.append((char)ch); getChar();} break;
-					case 'f': {sb.append((char)ch); getChar();} break;
-					case 'n': {sb.append((char)ch); getChar();} break;
-					case 'r': {sb.append((char)ch); getChar();} break;
-					case 't': {sb.append((char)ch); getChar();} break;
-					case 'v':  {sb.append((char)ch); getChar();} break;
-					case '\\': {sb.append((char)ch); getChar();} break;
-					case '"': {sb.append((char)ch); getChar();} break;
+					case 'a': {sb.append((char)7); getChar();} break;
+					case 'b': {sb.append((char)8); getChar();} break;
+					case 'f': {sb.append((char)12); getChar();} break;
+					case 'n': {sb.append((char)10); getChar();} break;
+					case 'r': {sb.append((char)13); getChar();} break;
+					case 't': {sb.append((char)9); getChar();} break;
+					case 'v':  {sb.append((char)11); getChar();} break;
+					case '\\': {sb.append((char)92); getChar();} break;
+					case '\"': {sb.append((char)ch); getChar();} break;
 					case '\'': {sb.append((char)ch); getChar();} break;
 					default: throw new LexicalException("Invalid escape sequence at Line: "+line+" Pos: "+pos+
 							" (valid ones are  \\b  \\t  \\n  \\f  \\r  \\\"  \\'  \\\\ )");
@@ -318,15 +319,15 @@ public class Scanner {
 				case 13: throw new LexicalException("Could not find matching quote for \"\'\" at Line: "+line+" Pos: "+(pos-sb.length()));
 				case '\\': { getChar();
 				switch (ch) {
-				case 'a': {sb.append((char)ch); getChar();} break;
-				case 'b': {sb.append((char)ch); getChar();} break;
-				case 'f': {sb.append((char)ch); getChar();} break;
-				case 'n': {sb.append((char)ch); getChar();} break;
-				case 'r': {sb.append((char)ch); getChar();} break;
-				case 't': {sb.append((char)ch); getChar();} break;
-				case 'v':  {sb.append((char)ch); getChar();} break;
-				case '\\': {sb.append((char)ch); getChar();} break;
-				case '"': {sb.append((char)ch); getChar();} break;
+				case 'a': {sb.append((char)7); getChar();} break;
+				case 'b': {sb.append((char)8); getChar();} break;
+				case 'f': {sb.append((char)12); getChar();} break;
+				case 'n': {sb.append((char)10); getChar();} break;
+				case 'r': {sb.append((char)13); getChar();} break;
+				case 't': {sb.append((char)9); getChar();} break;
+				case 'v':  {sb.append((char)11); getChar();} break;
+				case '\\': {sb.append((char)92); getChar();} break;
+				case '\"': {sb.append((char)ch); getChar();} break;
 				case '\'': {sb.append((char)ch); getChar();} break;
 				default: throw new LexicalException("Invalid escape sequence at Line: "+line+" Pos: "+pos+
 						" (valid ones are  \\b  \\t  \\n  \\f  \\r  \\\"  \\'  \\\\ )");

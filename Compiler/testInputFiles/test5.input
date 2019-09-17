@@ -1,4 +1,5 @@
-function why
+function --This is a comment
 
 
 goto 	2147483647
+"Comment was ignored"
