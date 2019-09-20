@@ -41,6 +41,15 @@ public class Scanner {
 		getChar();
 	}
 
+	public Scanner(Reader r2, boolean b) throws IOException {
+		this.r = r;
+		currPos = -1;
+		currLine = 0;
+		ch = -1;
+		prev = -1;
+		getChar();
+	}
+
 	int currPos;
 	int currLine;
 	int ch;
