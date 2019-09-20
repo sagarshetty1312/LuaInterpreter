@@ -41,7 +41,7 @@ public class Scanner {
 		getChar();
 	}
 
-	public Scanner(Reader r2, boolean b) throws IOException {
+	public Scanner(Reader r, boolean b) throws IOException {
 		this.r = r;
 		currPos = -1;
 		currLine = 0;

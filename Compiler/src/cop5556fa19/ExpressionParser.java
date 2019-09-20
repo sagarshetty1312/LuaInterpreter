@@ -41,16 +41,16 @@ import cop5556fa19.Token.Kind;
 import static cop5556fa19.Token.Kind.*;
 
 public class ExpressionParser {
-	
+
 	@SuppressWarnings("serial")
 	class SyntaxException extends Exception {
 		Token t;
-		
+
 		public SyntaxException(Token t, String message) {
 			super(t.line + ":" + t.pos + " " + message);
 		}
 	}
-	
+
 	final Scanner scanner;
 	Token t;  //invariant:  this is the next token
 
@@ -59,7 +59,6 @@ public class ExpressionParser {
 		this.scanner = s;
 		t = scanner.getNext(); //establish invariant
 	}
-
 
 	Exp exp() throws Exception {
 		Token first = t;
@@ -71,13 +70,156 @@ public class ExpressionParser {
 		}
 		return e0;
 	}
-
 	
-private Exp andExp() throws Exception{
+	Exp andExp() throws Exception {
+		Token first = t;
+		Exp e0 = relationExp();
+		while (isKind(KW_and)) {
+			Token op = consume();
+			Exp e1 = relationExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}
+	
+	Exp relationExp() throws Exception {
+		Token first = t;
+		Exp e0 = bitOrExp();
+		while ((isKind(REL_LT)) || (isKind(REL_GT)) || (isKind(REL_LE)) || (isKind(REL_GE)) || (isKind(REL_NOTEQ)) || (isKind(REL_EQEQ))) {
+			Token op = consume();
+			Exp e1 = bitOrExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}
+	
+	Exp bitOrExp() throws Exception {
+		Token first = t;
+		Exp e0 = bitXorExp();
+		while (isKind(BIT_OR)) {
+			Token op = consume();
+			Exp e1 = bitXorExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}
+	
+	Exp bitXorExp() throws Exception {
+		Token first = t;
+		Exp e0 = bitAmpExp();
+		while (isKind(BIT_XOR)) {
+			Token op = consume();
+			Exp e1 = bitAmpExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}
+	
+	Exp bitAmpExp() throws Exception {
+		Token first = t;
+		Exp e0 = bitShiftExp();
+		while (isKind(BIT_AMP)) {
+			Token op = consume();
+			Exp e1 = bitShiftExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}
+	
+	Exp bitShiftExp() throws Exception {
+		Token first = t;
+		Exp e0 = dotdotExp();
+		while ((isKind(BIT_SHIFTL)) || (isKind(BIT_SHIFTR))) {
+			Token op = consume();
+			Exp e1 = dotdotExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}
+	
+	Exp dotdotExp() throws Exception {
+		Token first = t;
+		Exp e0 = plusMinusExp();
+		while (isKind(DOTDOT)) {
+			Token op = consume();
+			Exp e1 = plusMinusExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}
+
+	Exp plusMinusExp() throws Exception {
+		Token first = t;
+		Exp e0 = timesDivExp();
+		while ((isKind(OP_PLUS)) || (isKind(OP_MINUS))) {
+			Token op = consume();
+			Exp e1 = timesDivExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}
+	
+	Exp timesDivExp() throws Exception {
+		Token first = t;
+		Exp e0 = unaryExp();
+		while ((isKind(OP_TIMES)) || (isKind(OP_DIV)) || (isKind(OP_DIVDIV)) || (isKind(OP_MOD))) {
+			Token op = consume();
+			Exp e1 = unaryExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}
+	
+//Start here!
+	Exp unaryExp() throws Exception {
+		Token first = t;
+		Exp e0 = unaryExp();
+		while ((isKind(OP_TIMES)) || (isKind(OP_DIV)) || (isKind(OP_DIVDIV)) || (isKind(OP_MOD))) {
+			Token op = consume();
+			Exp e1 = unaryExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}
+
+	private Exp exampleExp() throws Exception{
 		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException("andExp");  //I find this is a more useful placeholder than returning null.
 	}
 
+	/*Exp exp() throws Exception {
+		Token first = t;
+		
+		
+		
+		switch(t.kind) {
+		case KW_nil:
+		case KW_false:
+		case KW_true:
+		case INTLIT:
+		case STRINGLIT:
+		case DOTDOTDOT:
+		case KW_function:
+			Token op = consume();
+			break;
+			
+		}
+		
+		
+		Exp e0 = andExp();
+		while ((isKind(KW_nil)) || (isKind(KW_false)) || (isKind(KW_true)) || (isKind(INTLIT))
+				 || (isKind(STRINGLIT)) || (isKind(DOTDOTDOT)) || (isKind(KW_function)) || (isKind(KW_nil))
+				 || (isKind(KW_nil)) || (isKind(KW_nil)) || (isKind(KW_nil)) || (isKind(KW_nil))) {
+			Token op = consume();
+			Exp e1 = andExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;
+	}*/
+		
+
+
+	
 
 	private Block block() {
 		return new Block(null);  //this is OK for Assignment 2
@@ -132,10 +274,10 @@ private Exp andExp() throws Exception{
 
 	Token consume() throws Exception {
 		Token tmp = t;
-        t = scanner.getNext();
+		t = scanner.getNext();
 		return tmp;
 	}
-	
+
 	void error(Kind... expectedKinds) throws SyntaxException {
 		String kinds = Arrays.toString(expectedKinds);
 		String message;
@@ -151,7 +293,7 @@ private Exp andExp() throws Exception{
 		String message = m + " at " + t.line + ":" + t.pos;
 		throw new SyntaxException(t, message);
 	}
-	
+
 
 
 }
