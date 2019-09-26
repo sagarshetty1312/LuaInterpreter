@@ -26,6 +26,12 @@ public class ExpUnary extends Exp {
 		this.op = op;
 		this.e = e;
 	}
+	
+	public ExpUnary(Token firstToken, Token op, Exp e) {
+		super(firstToken);
+		this.op = op.kind;
+		this.e = e;
+	}
 
 
 	@Override

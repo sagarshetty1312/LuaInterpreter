@@ -39,6 +39,7 @@ import cop5556fa19.AST.Name;
 import cop5556fa19.AST.ParList;
 import cop5556fa19.Token.Kind;
 import static cop5556fa19.Token.Kind.*;
+import static org.junit.Assert.assertNotNull;
 
 public class ExpressionParser {
 
@@ -58,6 +59,7 @@ public class ExpressionParser {
 	ExpressionParser(Scanner s) throws Exception {
 		this.scanner = s;
 		t = scanner.getNext(); //establish invariant
+		exp();
 	}
 
 	Exp exp() throws Exception {
@@ -170,16 +172,65 @@ public class ExpressionParser {
 		return e0;
 	}
 	
-//Start here!
 	Exp unaryExp() throws Exception {
 		Token first = t;
-		Exp e0 = unaryExp();
-		while ((isKind(OP_TIMES)) || (isKind(OP_DIV)) || (isKind(OP_DIVDIV)) || (isKind(OP_MOD))) {
+		Exp e0 = null;
+		if((isKind(KW_not)) || (isKind(OP_HASH)) || (isKind(OP_MINUS)) || (isKind(BIT_XOR))) {
 			Token op = consume();
-			Exp e1 = unaryExp();
+			e0 = powExp();
+			e0 = new ExpUnary(first, op, e0);
+		}else {
+			e0 = powExp();
+			
+		}
+		return e0;
+	}
+
+	Exp powExp() throws Exception {
+		Token first = t;
+		Exp e0 = factorExp();
+		while (isKind(OP_POW)) {
+			Token op = consume();
+			Exp e1 = factorExp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
+	}
+	
+	Exp factorExp() throws Exception {
+		Token first = t;
+		if(isKind(LPAREN)) {
+			//(expr)
+		}else if(isKind(KW_function)) {
+			
+		}else if(isKind(KW_nil)) {
+			
+		}else if(isKind(KW_true)) {
+			
+		}else if(isKind(KW_false)) {
+			
+		}else if(isKind(INTLIT)) {
+			
+		}else if(isKind(STRINGLIT)) {
+			
+		}else if(isKind(DOTDOTDOT)) {
+			
+		}else if(isKind(KW_function)) {
+			
+		}else if((isKind(NAME)) | (isKind(LPAREN))) {
+			
+		}else if(isKind(LCURLY)) {
+			
+		}
+		
+		/*Token first = t;
+		Exp e0 = factorExp();
+		while (isKind(OP_POW)) {
+			Token op = consume();
+			Exp e1 = factorExp();
+			e0 = new ExpBinary(first, e0, op, e1);
+		}
+		return e0;*/
 	}
 
 	private Exp exampleExp() throws Exception{

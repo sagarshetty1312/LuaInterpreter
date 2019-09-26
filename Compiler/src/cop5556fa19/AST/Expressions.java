@@ -32,7 +32,7 @@ public class Expressions {
 	}
 
 	static public ExpString makeExpString(String s) {
-		Token t = new Token(Kind.STRINGLIT, s, 0,0);
+		Token t = new Token(Kind.STRINGLIT, '"' + s + '"', 0,0);
 		return new ExpString(t);
 	}
 
