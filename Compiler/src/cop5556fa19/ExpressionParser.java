@@ -140,7 +140,7 @@ public class ExpressionParser {
 	
 	Exp dotdotExp() throws Exception {
 		Token first = t;
-		Exp e0 = plusMinusExp();
+		Exp e0 = minusExp();
 		while (isKind(DOTDOT)) {
 			Token op = consume();
 			Exp e1 = exp();
@@ -149,10 +149,25 @@ public class ExpressionParser {
 		return e0;
 	}
 
-	Exp plusMinusExp() throws Exception {
+	Exp minusExp() throws Exception {
+		Token first = t;
+		Exp e0 = plusExp();
+		if(isKind(OP_MINUS)) {
+			while (isKind(OP_MINUS)) {
+				Token op = consume();
+				Exp e1 = plusExp();
+				e0 = new ExpBinary(first, e0, op, e1);
+			}
+		}else {
+			//e0 = plusExp();
+		}
+		return e0;
+	}
+	
+	Exp plusExp() throws Exception {
 		Token first = t;
 		Exp e0 = timesDivExp();
-		while ((isKind(OP_PLUS)) || (isKind(OP_MINUS))) {
+		while (isKind(OP_PLUS)) {
 			Token op = consume();
 			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
@@ -176,7 +191,7 @@ public class ExpressionParser {
 		Exp e0 = null;
 		if((isKind(KW_not)) || (isKind(OP_HASH)) || (isKind(OP_MINUS)) || (isKind(BIT_XOR))) {
 			Token op = consume();
-			e0 = powExp();
+			e0 = exp();
 			e0 = new ExpUnary(first, op, e0);
 		}else {
 			e0 = powExp();
@@ -237,6 +252,8 @@ public class ExpressionParser {
 			List fieldList = fieldList();
 			Token c2 = match(RCURLY);
 			return new ExpTable(first, fieldList);
+		}else {
+			throw new SyntaxException(first, "");
 		}
 		return e0;
 	}
