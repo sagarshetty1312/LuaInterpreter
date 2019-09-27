@@ -203,10 +203,14 @@ public class ExpressionParser {
 	Exp powExp() throws Exception {
 		Token first = t;
 		Exp e0 = factorExp();
-		while (isKind(OP_POW)) {
-			Token op = consume();
-			Exp e1 = exp();
-			e0 = new ExpBinary(first, e0, op, e1);
+		if(isKind(OP_POW)) {
+			while (isKind(OP_POW)) {
+				Token op = consume();
+				Exp e1 = exp();
+				e0 = new ExpBinary(first, e0, op, e1);
+			}	
+		}else {
+			
 		}
 		return e0;
 	}
