@@ -199,11 +199,13 @@ public class ExpressionParser {
 	
 	Exp factorExp() throws Exception {
 		Token first = t;
-		if(isKind(LPAREN)) {
-			//(expr)
-		}else if(isKind(KW_function)) {
-			
-		}else if(isKind(KW_nil)) {
+		Exp e0 = null;
+		if(isKind(KW_function)) {
+			Token op = consume();
+			FuncBody e1 = funcBodyExp();
+			e0 = new ExpFunction(first, e1);
+		}
+		else if(isKind(KW_nil)) {
 			
 		}else if(isKind(KW_true)) {
 			
@@ -215,13 +217,14 @@ public class ExpressionParser {
 			
 		}else if(isKind(DOTDOTDOT)) {
 			
-		}else if(isKind(KW_function)) {
+		}else if((isKind(NAME)) | (isKind(LPAREN))) {//prefix exp
 			
-		}else if((isKind(NAME)) | (isKind(LPAREN))) {
+		}else if(isKind(LCURLY)) { //tableconstructor
 			
-		}else if(isKind(LCURLY)) {
-			
+		}else if(isKind(LPAREN)) {
+			//(expr)
 		}
+		return e0;
 		
 		/*Token first = t;
 		Exp e0 = factorExp();
@@ -231,6 +234,59 @@ public class ExpressionParser {
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;*/
+	}
+
+	public FuncBody funcBodyExp() throws Exception {
+		Token first = t;
+		if(isKind(LPAREN)) {
+			Token lp = consume();
+			ParList e0 = parListExp();
+			if(isKind(RPAREN)) {
+				Token rp = consume();
+				if(isKind(KW_end)) {
+					Token end = consume();
+					FuncBody e1 = new FuncBody(first, e0, new Block(first));
+				}else{
+					throw new SyntaxException(t, "Invalid character at:");
+				}
+			}else {
+				throw new SyntaxException(t, "Invalid character at:");
+			}
+		}else {
+			throw new SyntaxException(t, "Invalid character at:");
+		}
+		return null;
+	}
+
+	public ParList parListExp() throws Exception {
+		Token first = t;
+		if((isKind(NAME)) || (isKind(DOTDOTDOT))) {
+			List e0 = nameList();
+			boolean hasVarArgs = false;
+			if (isKind(DOTDOTDOT)) {
+				Token ddd = consume();
+				hasVarArgs = true;
+				return new ParList(first, e0, hasVarArgs);
+			}else {
+				return new ParList(first, e0, hasVarArgs);
+			}
+		}else {
+			return new ParList(first, null, false);
+		}
+	}
+
+	public List nameList() throws Exception {
+		Token first = t;
+		List<Name> list = null;
+		if(isKind(NAME)) {
+			Token op = consume();
+			list.add(new Name(first, op.getName()));
+			while(isKind(COMMA)) {
+				Token newName = consume();
+				list.add(new Name(first, newName.getName()));
+			}
+		}
+		return list;
 	}
 
 	private Exp exampleExp() throws Exception{
