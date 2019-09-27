@@ -59,7 +59,6 @@ public class ExpressionParser {
 	ExpressionParser(Scanner s) throws Exception {
 		this.scanner = s;
 		t = scanner.getNext(); //establish invariant
-		exp();
 	}
 
 	Exp exp() throws Exception {
@@ -67,7 +66,7 @@ public class ExpressionParser {
 		Exp e0 = andExp();
 		while (isKind(KW_or)) {
 			Token op = consume();
-			Exp e1 = andExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -78,7 +77,7 @@ public class ExpressionParser {
 		Exp e0 = relationExp();
 		while (isKind(KW_and)) {
 			Token op = consume();
-			Exp e1 = relationExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -89,7 +88,7 @@ public class ExpressionParser {
 		Exp e0 = bitOrExp();
 		while ((isKind(REL_LT)) || (isKind(REL_GT)) || (isKind(REL_LE)) || (isKind(REL_GE)) || (isKind(REL_NOTEQ)) || (isKind(REL_EQEQ))) {
 			Token op = consume();
-			Exp e1 = bitOrExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -100,7 +99,7 @@ public class ExpressionParser {
 		Exp e0 = bitXorExp();
 		while (isKind(BIT_OR)) {
 			Token op = consume();
-			Exp e1 = bitXorExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -111,7 +110,7 @@ public class ExpressionParser {
 		Exp e0 = bitAmpExp();
 		while (isKind(BIT_XOR)) {
 			Token op = consume();
-			Exp e1 = bitAmpExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -122,7 +121,7 @@ public class ExpressionParser {
 		Exp e0 = bitShiftExp();
 		while (isKind(BIT_AMP)) {
 			Token op = consume();
-			Exp e1 = bitShiftExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -133,7 +132,7 @@ public class ExpressionParser {
 		Exp e0 = dotdotExp();
 		while ((isKind(BIT_SHIFTL)) || (isKind(BIT_SHIFTR))) {
 			Token op = consume();
-			Exp e1 = dotdotExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -144,7 +143,7 @@ public class ExpressionParser {
 		Exp e0 = plusMinusExp();
 		while (isKind(DOTDOT)) {
 			Token op = consume();
-			Exp e1 = plusMinusExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -155,7 +154,7 @@ public class ExpressionParser {
 		Exp e0 = timesDivExp();
 		while ((isKind(OP_PLUS)) || (isKind(OP_MINUS))) {
 			Token op = consume();
-			Exp e1 = timesDivExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -166,7 +165,7 @@ public class ExpressionParser {
 		Exp e0 = unaryExp();
 		while ((isKind(OP_TIMES)) || (isKind(OP_DIV)) || (isKind(OP_DIVDIV)) || (isKind(OP_MOD))) {
 			Token op = consume();
-			Exp e1 = unaryExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -191,7 +190,7 @@ public class ExpressionParser {
 		Exp e0 = factorExp();
 		while (isKind(OP_POW)) {
 			Token op = consume();
-			Exp e1 = factorExp();
+			Exp e1 = exp();
 			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
@@ -206,55 +205,81 @@ public class ExpressionParser {
 			e0 = new ExpFunction(first, e1);
 		}
 		else if(isKind(KW_nil)) {
-			
+			Token t = match(KW_nil);
+			e0 = new ExpString(t);
 		}else if(isKind(KW_true)) {
-			
+			Token t = match(KW_true);
+			e0 = new ExpTrue(t);
 		}else if(isKind(KW_false)) {
-			
+			Token t = match(KW_false);
+			e0 = new ExpFalse(t);
 		}else if(isKind(INTLIT)) {
-			
+			Token t = match(INTLIT);
+			e0 = new ExpInt(t);
 		}else if(isKind(STRINGLIT)) {
-			
+			Token t = match(STRINGLIT);
+			e0 = new ExpString(t);
 		}else if(isKind(DOTDOTDOT)) {
-			
-		}else if((isKind(NAME)) | (isKind(LPAREN))) {//prefix exp
-			
-		}else if(isKind(LCURLY)) { //tableconstructor
-			
+			Token t = match(DOTDOTDOT);
+			e0 = new ExpVarArgs(t);
+		}else if(isKind(NAME)) {//prefix exp
+			Token t = match(NAME);
+			e0 = new ExpName(t);
 		}else if(isKind(LPAREN)) {
-			//(expr)
+			Token lp = consume();
+			e0 = exp();
+			Token rp = match(RPAREN);
+			//Prefix Exp??
+			
+		}else if(isKind(LCURLY)) {
+			/*Tableconstructor*/
+			Token c1 = consume();
+			List fieldList = fieldList();
+			Token c2 = match(RCURLY);
+			return new ExpTable(first, fieldList);
 		}
 		return e0;
-		
-		/*Token first = t;
-		Exp e0 = factorExp();
-		while (isKind(OP_POW)) {
-			Token op = consume();
-			Exp e1 = factorExp();
-			e0 = new ExpBinary(first, e0, op, e1);
+	}
+
+	private List<Field> fieldList() throws Exception {
+		Token first = t;
+		List<Field> list = null;
+		list.add(field());
+		while((isKind(COMMA)) || (isKind(SEMI))) {
+			consume();
+			Field field = field(); 
+			list.add(field);
 		}
-		return e0;*/
+		
+		return list;
+	}
+
+	public Field field() throws Exception {
+		Token first = t;
+		if(isKind(LSQUARE)) {
+			Token ls = consume();
+			Exp key = exp();
+			Token rs = match(RSQUARE);
+			Token eq = match(ASSIGN);
+			Exp value = exp();
+			return new FieldExpKey(first, key, value);
+			
+		}else if(isKind(NAME)){
+			Exp name = new ExpName(match(NAME));
+			Token eq = match(ASSIGN);
+			Exp value = exp();
+			return new FieldExpKey(first, name, value);
+		}else
+			return new FieldImplicitKey(first, exp());
 	}
 
 	public FuncBody funcBodyExp() throws Exception {
 		Token first = t;
-		if(isKind(LPAREN)) {
-			Token lp = consume();
-			ParList e0 = parListExp();
-			if(isKind(RPAREN)) {
-				Token rp = consume();
-				if(isKind(KW_end)) {
-					Token end = consume();
-					FuncBody e1 = new FuncBody(first, e0, new Block(first));
-				}else{
-					throw new SyntaxException(t, "Invalid character at:");
-				}
-			}else {
-				throw new SyntaxException(t, "Invalid character at:");
-			}
-		}else {
-			throw new SyntaxException(t, "Invalid character at:");
-		}
+		Token lp = match(LPAREN);
+		ParList e0 = parListExp();
+		Token rp = match(RPAREN);
+		Token end = match(KW_end);
+		FuncBody e1 = new FuncBody(first, e0, new Block(first));
 		return null;
 	}
 
@@ -293,36 +318,6 @@ public class ExpressionParser {
 		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException("andExp");  //I find this is a more useful placeholder than returning null.
 	}
-
-	/*Exp exp() throws Exception {
-		Token first = t;
-		
-		
-		
-		switch(t.kind) {
-		case KW_nil:
-		case KW_false:
-		case KW_true:
-		case INTLIT:
-		case STRINGLIT:
-		case DOTDOTDOT:
-		case KW_function:
-			Token op = consume();
-			break;
-			
-		}
-		
-		
-		Exp e0 = andExp();
-		while ((isKind(KW_nil)) || (isKind(KW_false)) || (isKind(KW_true)) || (isKind(INTLIT))
-				 || (isKind(STRINGLIT)) || (isKind(DOTDOTDOT)) || (isKind(KW_function)) || (isKind(KW_nil))
-				 || (isKind(KW_nil)) || (isKind(KW_nil)) || (isKind(KW_nil)) || (isKind(KW_nil))) {
-			Token op = consume();
-			Exp e1 = andExp();
-			e0 = new ExpBinary(first, e0, op, e1);
-		}
-		return e0;
-	}*/
 		
 
 

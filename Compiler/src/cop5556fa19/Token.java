@@ -145,12 +145,12 @@ public class Token {
 	}
 	
 	/*precondition:  kind is STRINGLIT */
-	String getStringVal() {
+	public String getStringVal() {
 		return text.substring(1,text.length()-1);  //remove delimiters
 	}
 	
 	/*precondition:   kind is NAME */
-	String getName() {
+	public String getName() {
 		return text;
 	}
 }
