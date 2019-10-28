@@ -141,31 +141,21 @@ public class ExpressionParser {
 	Exp dotdotExp() throws Exception {
 		Token first = t;
 		Exp e0 = minusExp();
-		if(isKind(DOTDOT)) {
-			Token op = null;
-			Exp e1 = null;
-			while (isKind(DOTDOT)) {
-				op = consume();
-				e1 = minusExp();
-				e1 = new ExpBinary(first, e0, op, e1);
-			}
-			return new ExpBinary(first, e0, op, e1);
-		}else {
-			return e0;
+		while (isKind(DOTDOT)) {
+			Token op = consume();
+			Exp e1 = dotdotExp();
+			e0 = new ExpBinary(first, e0, op, e1);
 		}
+		return e0;
 	}
 
 	Exp minusExp() throws Exception {
 		Token first = t;
 		Exp e0 = plusExp();
-		if(isKind(OP_MINUS)) {
-			while (isKind(OP_MINUS)) {
-				Token op = consume();
-				Exp e1 = plusExp();
-				e0 = new ExpBinary(first, e0, op, e1);
-			}
-		}else {
-			//e0 = plusExp();
+		while (isKind(OP_MINUS)) {
+			Token op = consume();
+			Exp e1 = plusExp();
+			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
 	}
@@ -209,14 +199,10 @@ public class ExpressionParser {
 	Exp powExp() throws Exception {
 		Token first = t;
 		Exp e0 = factorExp();
-		if(isKind(OP_POW)) {
-			while (isKind(OP_POW)) {
-				Token op = consume();
-				Exp e1 = factorExp();
-				e0 = new ExpBinary(first, e0, op, e1);
-			}	
-		}else {
-			
+		while (isKind(OP_POW)) {
+			Token op = consume();
+			Exp e1 = powExp();
+			e0 = new ExpBinary(first, e0, op, e1);
 		}
 		return e0;
 	}
