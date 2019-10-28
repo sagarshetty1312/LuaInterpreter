@@ -59,4 +59,6 @@ public interface ASTVisitor {
 
 	Object visitBlock(Block block, Object arg);
 
+	Object visitExpFunctionCall(ExpFunctionCall expFunctionCall, Object arg);
+
 }

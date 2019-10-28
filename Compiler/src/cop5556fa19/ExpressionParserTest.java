@@ -255,9 +255,9 @@ class ExpressionParserTest {
 	void testFailed10() throws Exception {
 		String input = "{}";
 		Exp e = parseAndShow(input);
-		String expected = "ExpBinary [e0=ExpBinary [e0=ExpBinary [e0=ExpInt [v=1, firstToken=Token [kind=INTLIT, text=1, pos=1, line=1]], op=OP_TIMES, e1=ExpInt [v=2, firstToken=Token [kind=INTLIT, text=2, pos=1, line=1]]], op=OP_DIV, e1=ExpBinary [e0=ExpInt [v=3, firstToken=Token [kind=INTLIT, text=3, pos=1, line=1]], op=OP_MOD, e1=ExpInt [v=4, firstToken=Token [kind=INTLIT, text=4, pos=1, line=1]]]], op=OP_DIVDIV, e1=ExpInt [v=5, firstToken=Token [kind=INTLIT, text=5, pos=1, line=1]]]";
-		System.out.println("TEST10:\n" + e.toString());
-		//assertEquals(expected,e.toString());
+		String expected = "ExpTable [fields=null, firstToken=Token [kind=LCURLY, text={, pos=1, line=1]]";
+		//System.out.println("TEST10:\n" + e.toString());
+		assertEquals(expected,e.toString());
 	}
 	
 	@Test
@@ -272,10 +272,9 @@ class ExpressionParserTest {
 	@Test
 	void testFailed12() throws Exception {
 		String input = "{3, a}";
-		Exp e = parseAndShow(input);
-		String expected = "ExpBinary [e0=ExpBinary [e0=ExpBinary [e0=ExpInt [v=1, firstToken=Token [kind=INTLIT, text=1, pos=1, line=1]], op=OP_TIMES, e1=ExpInt [v=2, firstToken=Token [kind=INTLIT, text=2, pos=1, line=1]]], op=OP_DIV, e1=ExpBinary [e0=ExpInt [v=3, firstToken=Token [kind=INTLIT, text=3, pos=1, line=1]], op=OP_MOD, e1=ExpInt [v=4, firstToken=Token [kind=INTLIT, text=4, pos=1, line=1]]]], op=OP_DIVDIV, e1=ExpInt [v=5, firstToken=Token [kind=INTLIT, text=5, pos=1, line=1]]]";
-		System.out.println("TEST12:\n" + e.toString());
-		//assertEquals(expected,e.toString());
+		assertThrows(SyntaxException.class, ()->{
+			parseAndShow(input);
+	        });
 	}
 	
 	@Test

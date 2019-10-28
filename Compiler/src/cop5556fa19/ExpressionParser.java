@@ -250,18 +250,25 @@ public class ExpressionParser {
 		}else if(isKind(NAME)) {//prefix exp
 			Token t = match(NAME);
 			e0 = new ExpName(t);
-		}else if(isKind(LPAREN)) {
+		}else if(isKind(LPAREN)) {//prefix exp
 			Token lp = consume();
-			e0 = exp();
-			Token rp = match(RPAREN);
-			//Prefix Exp??
-			
+			if(checkIfExpFirst(this.t)) {
+				e0 = exp();
+			}else {
+				error(t.kind);
+				return null;
+			}
+			match(RPAREN);
 		}else if(isKind(LCURLY)) {
 			/*Tableconstructor*/
-			Token c1 = consume();
-			List fieldList = fieldList();
-			Token c2 = match(RCURLY);
-			return new ExpTable(first, fieldList);
+			consume();
+			if(isKind(RCURLY)) {
+				e0 =  new ExpTable(first, null);
+			}else {
+				List fieldList = fieldList();
+				Token c2 = match(RCURLY);
+				e0 =  new ExpTable(first, fieldList);
+			}
 		}else {
 			throw new SyntaxException(first, "");
 		}
@@ -274,30 +281,83 @@ public class ExpressionParser {
 		list.add(field());
 		while((isKind(COMMA)) || (isKind(SEMI))) {
 			consume();
-			Field field = field(); 
-			list.add(field);
+			if(checkIfFieldFirst(this.t)) {
+				Field field = field(); 
+				list.add(field);	
+			}else {
+				break;
+			}
 		}
 		
 		return list;
+	}
+
+	public boolean checkIfFieldFirst(Token token) {
+		switch (token.kind) {
+		case NAME:
+		case LSQUARE:
+			return true;
+		}
+		if(checkIfExpFirst(token))
+			return true;
+		return false;
+	}
+
+	public boolean checkIfExpFirst(Token token) {
+		switch (token.kind) {
+		case KW_nil:
+		case KW_false:
+		case KW_true:
+		case INTLIT:
+		case STRINGLIT:
+		case DOTDOTDOT:
+		case KW_function:
+		case NAME:
+		case LPAREN:
+		case LCURLY:
+			return true;
+		}
+		return false;
 	}
 
 	public Field field() throws Exception {
 		Token first = t;
 		if(isKind(LSQUARE)) {
 			Token ls = consume();
-			Exp key = exp();
+			Exp key = null;
+			if(checkIfExpFirst(this.t)) {
+				key = exp();
+			}else {
+				error(t.kind);
+				return null;
+			}
 			Token rs = match(RSQUARE);
 			Token eq = match(ASSIGN);
-			Exp value = exp();
+			Exp value = null;
+			if(checkIfExpFirst(this.t)) {
+				value = exp();
+			}else {
+				error(t.kind);
+				return null;
+			}
 			return new FieldExpKey(first, key, value);
 			
 		}else if(isKind(NAME)){
 			Exp name = new ExpName(match(NAME));
 			Token eq = match(ASSIGN);
-			Exp value = exp();
+			Exp value = null;
+			if(checkIfExpFirst(this.t)) {
+				value = exp();
+			}else {
+				error(t.kind);
+			}
 			return new FieldExpKey(first, name, value);
-		}else
-			return new FieldImplicitKey(first, exp());
+		}else if(checkIfExpFirst(this.t)) {
+				return new FieldImplicitKey(first, exp());
+		}else {
+			error(t.kind);
+			return null;
+		}
 	}
 
 	public FuncBody funcBodyExp() throws Exception {
