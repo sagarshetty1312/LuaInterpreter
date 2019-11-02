@@ -13,6 +13,8 @@
 
 package cop5556fa19.AST;
 
+import java.util.List;
+
 import cop5556fa19.Token;
 import cop5556fa19.Token.Kind;
 
@@ -58,6 +60,91 @@ public class Expressions {
 	public static ExpUnary makeExpUnary(Kind op, Exp e) {
 		Token first = new Token(op,op.toString(), 0,0);
 		return new ExpUnary(first,op,e);
+	}
+
+	public static Block makeBlock() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Object makeExpName(String string) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static List<Exp> makeExpList(Object makeExpName) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static List<Exp> makeExpList(Object makeExpName, Object makeExpName2) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static StatAssign makeStatAssign(List<Exp> lhs, List<Exp> rhs) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Block makeBlock(StatAssign s) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Exp makeExpInt(int i) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Exp makeExpFunCall(Object makeExpName, List<Exp> args, Object object) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Block makeBlock(Stat s) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Exp makeExpTableLookup(ExpName g, ExpString a) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Exp makeExpTableLookup(Exp gtable, ExpString b) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Stat makeStatAssign(Exp v, Exp e) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static StatLabel makeStatLabel(String string) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Stat makeStatGoto(String string) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static StatBreak makeStatBreak() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static StatDo makeStatDo(Stat s2, Stat s3, StatAssign s4) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Block makeBlock(Stat s0, StatLabel s1, StatDo statdo, StatBreak statBreak) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	

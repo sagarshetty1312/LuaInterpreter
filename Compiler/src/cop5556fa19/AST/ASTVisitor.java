@@ -61,4 +61,38 @@ public interface ASTVisitor {
 
 	Object visitExpFunctionCall(ExpFunctionCall expFunctionCall, Object arg);
 
+	Object visitStatForEach(StatForEach statForEach, Object arg);
+
+	Object visitChunk(Chunk chunk, Object arg);
+
+	Object visitExpTableLookup(ExpTableLookup expTableLookup, Object arg);
+
+	Object visitStatDo(StatDo statDo, Object arg);
+
+	Object visitStatBreak(StatBreak statBreak, Object arg);
+
+	Object visitRetStat(RetStat retStat, Object arg);
+
+	Object visitStatAssign(StatAssign statAssign, Object arg);
+
+	Object visitStatFor1(StatFor statFor, Object arg);
+
+	Object visitStatFunction(StatFunction statFunction, Object arg);
+
+	Object visitStatGoto(StatGoto statGoto, Object arg);
+
+	Object visitStatIf(StatIf statIf, Object arg);
+
+	Object visitLabel(StatLabel statLabel, Object arg);
+
+	Object visitStatLocalAssign(StatLocalAssign statLocalAssign, Object arg);
+
+	Object visitStatLocalFunc(StatLocalFunc statLocalFunc, Object arg);
+
+	Object visitStatRepeat(StatRepeat statRepeat, Object arg);
+
+	Object visitStatWhile(StatWhile statWhile, Object arg);
+
+	Object visitTableDeref(TableDeref tableDeref, Object arg);
+
 }
