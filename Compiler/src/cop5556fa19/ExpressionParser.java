@@ -187,7 +187,7 @@ public class ExpressionParser {
 		Exp e0 = null;
 		if((isKind(KW_not)) || (isKind(OP_HASH)) || (isKind(OP_MINUS)) || (isKind(BIT_XOR))) {
 			Token op = consume();
-			e0 = powExp();
+			e0 = unaryExp();
 			e0 = new ExpUnary(first, op, e0);
 		}else {
 			e0 = powExp();
@@ -247,11 +247,12 @@ public class ExpressionParser {
 			match(RPAREN);
 		}else if(isKind(LCURLY)) {
 			/*Tableconstructor*/
+			List fieldList = new ArrayList();
 			consume();
 			if(isKind(RCURLY)) {
-				e0 =  new ExpTable(first, null);
+				e0 =  new ExpTable(first, fieldList);
 			}else {
-				List fieldList = fieldList();
+				fieldList = fieldList();
 				Token c2 = match(RCURLY);
 				e0 =  new ExpTable(first, fieldList);
 			}
@@ -261,7 +262,7 @@ public class ExpressionParser {
 		return e0;
 	}
 
-	private List<Field> fieldList() throws Exception {
+	public List<Field> fieldList() throws Exception {
 		Token first = t;
 		List<Field> list = new ArrayList<Field>();
 		list.add(field());
@@ -329,15 +330,21 @@ public class ExpressionParser {
 			return new FieldExpKey(first, key, value);
 			
 		}else if(isKind(NAME)){
+			/*Token t = match(NAME);
+			e0 = new ExpName(t);*/
 			Exp name = new ExpName(match(NAME));
-			Token eq = match(ASSIGN);
-			Exp value = null;
-			if(checkIfExpFirst(this.t)) {
-				value = exp();
-			}else {
-				error(t.kind);
+			if(isKind(ASSIGN)) {
+				Token eq = match(ASSIGN);
+				Exp value = null;
+				if(checkIfExpFirst(this.t)) {
+					value = exp();
+				}else {
+					error(t.kind);
+				}
+				return new FieldExpKey(first, name, value);
+			} else {
+				return new FieldImplicitKey(first, name);
 			}
-			return new FieldExpKey(first, name, value);
 		}else if(checkIfExpFirst(this.t)) {
 				return new FieldImplicitKey(first, exp());
 		}else {
@@ -348,7 +355,6 @@ public class ExpressionParser {
 
 	public FuncBody funcBodyExp() throws Exception {
 		Token first = t;
-		Token lp = match(LPAREN);
 		ParList e0 = parListExp();
 		Token rp = match(RPAREN);
 		Token end = match(KW_end);
@@ -358,24 +364,26 @@ public class ExpressionParser {
 
 	public ParList parListExp() throws Exception {
 		Token first = t;
+		Token lp = match(LPAREN);
+		List<Name> list = new ArrayList<Name>();
 		if(isKind(NAME)) {
-			List e0 = nameList();
+			list = nameList();
 			boolean hasVarArgs = false;
 			if (isKind(DOTDOTDOT)) {
 				Token ddd = consume();
 				hasVarArgs = true;
-				return new ParList(first, e0, hasVarArgs);
+				return new ParList(first, list, hasVarArgs);
 			}else {
-				return new ParList(first, e0, hasVarArgs);
+				return new ParList(first, list, hasVarArgs);
 			}
 		}else if (isKind(DOTDOTDOT)) {
 			Token ddd = consume();
-			return new ParList(first, null, true);
+			return new ParList(first, list, true);
 		} else if (isKind(RPAREN)){
-			return new ParList(first, null, false);
+			return new ParList(first, list, false);
 		} else {
 			error(t.kind);
-			return new ParList(first, null, false);
+			return new ParList(first, list, false);
 		}
 	}
 
