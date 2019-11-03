@@ -188,7 +188,7 @@ public class ExpressionParser {
 		if((isKind(KW_not)) || (isKind(OP_HASH)) || (isKind(OP_MINUS)) || (isKind(BIT_XOR))) {
 			Token op = consume();
 			e0 = unaryExp();
-			e0 = new ExpUnary(first, op, e0);
+			e0 = new ExpUnary(first, op.kind, e0);
 		}else {
 			e0 = powExp();
 			
@@ -358,7 +358,7 @@ public class ExpressionParser {
 		ParList e0 = parListExp();
 		Token rp = match(RPAREN);
 		Token end = match(KW_end);
-		FuncBody e1 = new FuncBody(first, e0, new Block(first));
+		FuncBody e1 = new FuncBody(first, e0, new Block(first,null));
 		return e1;
 	}
 
@@ -418,7 +418,7 @@ public class ExpressionParser {
 	
 
 	private Block block() {
-		return new Block(null);  //this is OK for Assignment 2
+		return new Block(null,null);  //this is OK for Assignment 2
 	}
 
 

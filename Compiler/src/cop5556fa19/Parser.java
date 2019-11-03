@@ -36,8 +36,25 @@ import cop5556fa19.AST.FieldExpKey;
 import cop5556fa19.AST.FieldImplicitKey;
 import cop5556fa19.AST.FieldNameKey;
 import cop5556fa19.AST.FuncBody;
+import cop5556fa19.AST.FuncName;
 import cop5556fa19.AST.Name;
 import cop5556fa19.AST.ParList;
+import cop5556fa19.AST.RetStat;
+import cop5556fa19.AST.Stat;
+import cop5556fa19.AST.StatAssign;
+import cop5556fa19.AST.StatBreak;
+import cop5556fa19.AST.StatDo;
+import cop5556fa19.AST.StatFor;
+import cop5556fa19.AST.StatForEach;
+import cop5556fa19.AST.StatFunction;
+import cop5556fa19.AST.StatGoto;
+import cop5556fa19.AST.StatIf;
+import cop5556fa19.AST.StatLabel;
+import cop5556fa19.AST.StatLocalAssign;
+import cop5556fa19.AST.StatLocalFunc;
+import cop5556fa19.AST.StatRepeat;
+import cop5556fa19.AST.StatWhile;
+import cop5556fa19.AST.Var;
 import cop5556fa19.Token.Kind;
 import static cop5556fa19.Token.Kind.*;
 import static org.junit.Assert.assertNotNull;
@@ -61,6 +78,264 @@ public class Parser {
 		this.scanner = s;
 		t = scanner.getNext(); //establish invariant
 	}
+
+
+	public Chunk parse() throws Exception {
+		Token first = t;
+		return new Chunk(first, block());
+	}
+	
+	public Block block() throws Exception {
+		Token first = t;
+		List<Stat> list = new ArrayList<Stat>();
+		while(checkIfStatFirst(t)) {
+			list.add(stat());
+		}
+		if(isKind(KW_return)) {
+			list.add(retstat());
+		}
+		return new Block(first, list);
+	}
+
+
+	public RetStat retstat() throws Exception {
+		Token first = t;
+		List<Exp> list = new ArrayList<Exp>();
+		match(KW_return);
+		if(checkIfExpFirst(this.t)) {
+			list.add(exp());
+			while(isKind(COMMA)) {
+				consume();
+				list.add(exp());
+			}
+		}
+		if(isKind(SEMI)) {
+			consume();
+		}
+		return new RetStat(first, list);
+	}
+
+
+	public Stat stat() throws Exception {
+		Token first = t;
+		Stat e0 = null;
+		
+		if(isKind(SEMI)) {
+			consume();
+			e0 =  new StatBreak(first);
+			
+		}else if(checkIfVarFirst(first)) {
+			List varList = new ArrayList<Var>();
+			List expList = new ArrayList<Exp>();
+			while (checkIfVarFirst(this.t)) {
+				varList.add(var());
+			}
+			match(ASSIGN);
+			while(checkIfExpFirst(this.t)) {
+				expList.add(exp());
+			}
+			e0 =  new StatAssign(first, varList, expList);
+			
+		}else if(isKind(COLONCOLON)) {
+			//label
+			match(COLONCOLON);
+			Token name = null;
+			if(isKind(NAME)) {
+				name = consume();
+			}
+			match(COLONCOLON);
+			e0 =  new StatLabel(first, new Name(first, name.text));
+			
+		}else if(isKind(KW_break)) {
+			consume();
+			e0 =  new StatBreak(first);
+			
+		}else if(isKind(KW_goto)) {
+			consume();
+			Token name = match(NAME);
+			e0 =  new StatGoto(first, new Name(first, name.text));
+			
+		}else if(isKind(KW_do)) {
+			consume();
+			Block b = block();
+			match(Kind.KW_end);
+			e0 =  new StatDo(first, b);
+			
+		}else if(isKind(KW_while)) {
+			consume();
+			Exp e = exp();
+			match(KW_do);
+			Block b = block();
+			match(KW_end);
+			e0 =  new StatWhile(first, e, b);
+			
+		}else if(isKind(KW_repeat)) {
+			consume();
+			Block b = block();
+			match(KW_until);
+			e0 =  new StatRepeat(first, b, exp());
+			
+		}else if(isKind(KW_if)) {
+			List blockList = new ArrayList<Block>();
+			List expList = new ArrayList<Exp>();
+			consume();//if
+			expList.add(exp());
+			match(KW_then);
+			blockList.add(block());
+			while(isKind(KW_elseif)) {
+				consume();
+				expList.add(exp());
+				match(KW_then);
+				blockList.add(block());
+			}
+			if(isKind(KW_else)) {
+				consume();
+				blockList.add(block());
+			}
+			match(KW_end);
+			e0 =  new StatIf(first, expList, blockList);
+			
+		}else if(isKind(KW_for)) {
+			consume();
+			Token name = match(NAME);
+			if(isKind(ASSIGN)) {//StatFor
+				Exp einc = null;
+				Exp ebeg = exp();
+				match(COMMA);
+				Exp eend = exp();
+				if(isKind(COMMA)) {
+					einc = exp();
+				}
+				match(KW_do);
+				Block block = block();
+				match(KW_end);
+				e0 =  new StatFor(first, new ExpName(name.text), ebeg, eend, einc, block);
+				
+			}else {//StatForEach
+				List nameList = new ArrayList<ExpName>();
+				nameList.add(new ExpName(name.text));
+				while(isKind(COMMA)) {
+					consume();
+					name = match(NAME);
+					nameList.add(new ExpName(name.text));
+				}
+				match(KW_in);
+				List explist = expList();
+				match(KW_do);
+				Block block = block();
+				match(KW_end);
+				e0 =  new StatForEach(first, nameList, explist, block);
+			}
+			
+		}else if(isKind(KW_function)) {
+			consume();
+			e0 =  new StatFunction(first, funcName(), funcBodyExp());
+			
+			
+		}else if(isKind(KW_local)) {
+			consume();
+			if(isKind(KW_function)) {
+				//StatLocalFunc
+				consume();
+				Token name = match(NAME);
+				e0 =  new StatLocalFunc(first, new FuncName(first, new ExpName(name.text)), funcBodyExp());
+			}else {
+				//StatLocalAssign
+				List nameList = new ArrayList<ExpName>();
+				List expList = new ArrayList<Exp>();
+				Token name = match(NAME);
+				nameList.add(new ExpName(name.text));
+				while(isKind(COMMA)) {
+					consume();
+					name = match(NAME);
+					nameList.add(new ExpName(name.text));
+				}
+				if(isKind(ASSIGN)) {
+					consume();
+					expList.add(exp());
+					while(isKind(COMMA)) {
+						consume();
+						expList.add(exp());
+					}
+				}
+				e0 =  new StatLocalAssign(first, nameList, expList);
+			}
+		}
+		return e0;
+	}
+
+
+	public FuncName funcName() throws Exception {
+		Token first = t;
+		List nameList = new ArrayList<ExpName>();
+		Token name = match(NAME);
+		nameList.add(new ExpName(name.text));
+		if((isKind(DOT)||(isKind(COLON)))){
+			while(isKind(DOT)) {
+				consume();
+				name = match(NAME);
+				nameList.add(new ExpName(name.text));
+			}
+			if(isKind(COLON)) {
+				consume();
+				name = match(NAME);
+				return new FuncName(first, nameList, new ExpName(name.text));
+			}else {
+				return new FuncName(first, nameList, null);
+			}
+			
+		}
+		return new FuncName(first, new ExpName(name.text));
+	}
+
+
+	public List expList() throws Exception {
+		List list = new ArrayList<Exp>();
+		list.add(exp());
+		while(isKind(COMMA)) {
+			list.add(exp());
+		}
+		return list;
+	}
+
+
+	public boolean checkIfStatFirst(Token token) {
+		switch (token.kind) {
+		case SEMI:
+		//case functionCall: to implement
+		case COLONCOLON:
+		case KW_break:
+		case KW_goto:
+		case DOTDOTDOT:
+		case KW_do:
+		case KW_while:
+		case KW_repeat:
+		case KW_if:
+		case KW_for:
+		case KW_function:
+		case KW_local:
+			return true;
+		}
+		
+		if(checkIfVarFirst(token))
+			return true;
+		
+		return false;
+	}
+
+	private boolean checkIfVarFirst(Token token) {
+		switch (token.kind) {
+		case SEMI:
+			//to implement
+			return true;
+		}
+		
+		if(checkIfVarFirst(token))
+			return true;
+		
+		return false;
+	}
+
 
 	Exp exp() throws Exception {
 		Token first = t;
@@ -189,7 +464,7 @@ public class Parser {
 		if((isKind(KW_not)) || (isKind(OP_HASH)) || (isKind(OP_MINUS)) || (isKind(BIT_XOR))) {
 			Token op = consume();
 			e0 = unaryExp();
-			e0 = new ExpUnary(first, op, e0);
+			e0 = new ExpUnary(first, op.kind, e0);
 		}else {
 			e0 = powExp();
 			
@@ -234,7 +509,9 @@ public class Parser {
 		}else if(isKind(DOTDOTDOT)) {
 			Token t = match(DOTDOTDOT);
 			e0 = new ExpVarArgs(t);
-		}else if(isKind(NAME)) {//prefix exp
+		}else if((isKind(NAME)) || (isKind(LPAREN))) {
+			//prefix exp
+			prefixExp();
 			Token t = match(NAME);
 			e0 = new ExpName(t);
 		}else if(isKind(LPAREN)) {//prefix exp
@@ -356,16 +633,16 @@ public class Parser {
 
 	public FuncBody funcBodyExp() throws Exception {
 		Token first = t;
-		ParList e0 = parListExp();
-		Token rp = match(RPAREN);
+		match(LPAREN);
+		ParList listPar = parListExp();
+		match(RPAREN);
+		Block block = block();
 		Token end = match(KW_end);
-		FuncBody e1 = new FuncBody(first, e0, new Block(first));
-		return e1;
+		return new FuncBody(first, listPar, block);
 	}
 
 	public ParList parListExp() throws Exception {
 		Token first = t;
-		Token lp = match(LPAREN);
 		List<Name> list = new ArrayList<Name>();
 		if(isKind(NAME)) {
 			list = nameList();
@@ -380,10 +657,7 @@ public class Parser {
 		}else if (isKind(DOTDOTDOT)) {
 			Token ddd = consume();
 			return new ParList(first, list, true);
-		} else if (isKind(RPAREN)){
-			return new ParList(first, list, false);
 		} else {
-			error(t.kind);
 			return new ParList(first, list, false);
 		}
 	}
@@ -391,19 +665,17 @@ public class Parser {
 	public List nameList() throws Exception {
 		Token first = t;
 		List<Name> list = new ArrayList<Name>();
-		if(isKind(NAME)) {
-			Token op = consume();
-			list.add(new Name(first, op.getName()));
-			while(isKind(COMMA)) {
-				match(COMMA);
-				if(isKind(NAME)) {
-					Token newName = consume();
-					list.add(new Name(first, newName.getName()));
-				}else if(isKind(DOTDOTDOT)){
-					break;
-				}else {
-					error(t.kind);
-				}
+		Token op = match(NAME);
+		list.add(new Name(first, op.getName()));
+		while(isKind(COMMA)) {
+			consume();
+			if(isKind(NAME)) {
+				Token newName = consume();
+				list.add(new Name(first, newName.getName()));
+			}else if(isKind(DOTDOTDOT)){
+				break;
+			}else {
+				error(t.kind);
 			}
 		}
 		return list;
@@ -413,14 +685,7 @@ public class Parser {
 		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException("andExp");  //I find this is a more useful placeholder than returning null.
 	}
-		
 
-
-	
-
-	private Block block() {
-		return new Block(null);  //this is OK for Assignment 2
-	}
 
 
 	protected boolean isKind(Kind kind) {
@@ -489,11 +754,6 @@ public class Parser {
 	void error(Token t, String m) throws SyntaxException {
 		String message = m + " at " + t.line + ":" + t.pos;
 		throw new SyntaxException(t, message);
-	}
-
-	public Chunk parse() {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 

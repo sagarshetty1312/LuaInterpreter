@@ -1,6 +1,6 @@
 package cop5556fa19.AST;
 
-import cop5556fa19.Token;;
+import cop5556fa19.Token;
 
 public abstract class Var extends Exp {
 
