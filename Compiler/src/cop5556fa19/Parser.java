@@ -17,17 +17,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import cop5556fa19.AST.ASTNode;
 import cop5556fa19.AST.Block;
 import cop5556fa19.AST.Chunk;
 import cop5556fa19.AST.Exp;
 import cop5556fa19.AST.ExpBinary;
 import cop5556fa19.AST.ExpFalse;
 import cop5556fa19.AST.ExpFunction;
+import cop5556fa19.AST.ExpFunctionCall;
 import cop5556fa19.AST.ExpInt;
+import cop5556fa19.AST.ExpList;
 import cop5556fa19.AST.ExpName;
 import cop5556fa19.AST.ExpNil;
 import cop5556fa19.AST.ExpString;
 import cop5556fa19.AST.ExpTable;
+import cop5556fa19.AST.ExpTableLookup;
 import cop5556fa19.AST.ExpTrue;
 import cop5556fa19.AST.ExpUnary;
 import cop5556fa19.AST.ExpVarArgs;
@@ -288,8 +292,7 @@ public class Parser {
 		}
 		
 		if(varCaseExp != null) {
-			return null;
-			//return with prefixExp and varCaseExp = to be implemented
+			return new ExpTableLookup(first, prefixExp, varCaseExp);
 		} else {
 			error(LSQUARE,DOT);
 			return null;
@@ -317,76 +320,69 @@ public class Parser {
 		Exp last = null;
 		varCaseExp = last;
 		Exp e0 = exp;
-		boolean lSquareFlag = false;
-		boolean dotFlag = false;
+		boolean tableLookupFlag = false;
 		
 		while(checkIfPrefixTailFirst()) {
-			if(lSquareFlag) {
-				//add last to e0 = to be implemented
-			}else if(dotFlag) {
-				//add last to e0 = to be implemented
+			if(tableLookupFlag) {
+				e0 = new ExpTableLookup(first, e0, last);
 			}
 			
 			if(isKind(LSQUARE)) {
 				consume();
-				lSquareFlag = true;
-				dotFlag = false;
+				tableLookupFlag = true;
 				last = exp();
 				match(RSQUARE);
 				
 			} else if(isKind(DOT)) {
 				consume();
-				lSquareFlag = false;
-				dotFlag = true;
-				last = new ExpName(match(NAME));
+				tableLookupFlag = true;
+				//last = new ExpName(match(NAME));
+				last = new ExpString(match(NAME));
 				
 			} else if((isKind(LPAREN) || isKind(LCURLY) || isKind(STRINGLIT))) {
-				lSquareFlag = false;
-				dotFlag = false;
-				//e0 = new SomeAST args(); = to be implemented
+				tableLookupFlag = false;
+				e0 = new ExpFunctionCall(first, e0, args());
 				
 			} else if(isKind(COLON)) {
 				consume();
-				lSquareFlag = false;
-				dotFlag = false;
+				tableLookupFlag = false;
+				List<Exp> list = new ArrayList<Exp>();
 				Token name1 = match(NAME);
-				//e0 = new SomeAST args(); = to be implemented
+				list.add(new ExpName(name1));
+				list.addAll(args());
+				e0 = new ExpFunctionCall(first, e0, list);
 				
 			}
 		}
 
-		if(lSquareFlag || dotFlag) {
+		if(tableLookupFlag) {
 			varCaseExp = last;
 		}
 		return e0;
 	}
 
 
-	public Exp args() throws Exception {
+	public List args() throws Exception {
 		Token first = t;
-		Exp e0;
+		List<Exp> expList = new ArrayList<Exp>();
 		if(isKind(LPAREN)) {
 			consume();
 			if(checkIfExpFirst(t)) {
-				List<Exp> expList = new ArrayList<Exp>();
 				expList.add(exp());
 				while(isKind(COMMA)) {
 					consume();
 					expList.add(exp());
 				}
 				match(RPAREN);
-				//e0 =  args with expList = to be implemented
-			} else {
-				//e0 = empty args = to be implemented
 			}
 			
 		}else if(isKind(LCURLY)) {
-			e0 = expTableConstructor(); 
+			expList.add(expTableConstructor()); 
 		}else {
-			Token stringLit = consume();
-			//e0 = args with stringlit = to be imlemented
+			consume();
+			expList.add(new ExpString(first));
 		}
-		return null;
+		return expList;
 	}
 
 
@@ -688,21 +684,24 @@ public class Parser {
 				consume();
 				last = exp();
 				match(RSQUARE);
-				//create new prefixexp with last = to be implemented
+				e0 = new ExpTableLookup(first, e0, last);
 				
 			} else if(isKind(DOT)) {
 				consume();
-				last = new ExpName(match(NAME));
-				//create new prefixexp with last = to be implemented
+				//last = new ExpName(match(NAME));
+				last = new ExpString(match(NAME));
+				e0 = new ExpTableLookup(first, e0, last);
+				
 			} else if((isKind(LPAREN) || isKind(LCURLY) || isKind(STRINGLIT))) {
-				last = args();
-				//create new prefixexp with last = to be implemented
+				e0 = new ExpFunctionCall(first, e0, args());
 				
 			} else if(isKind(COLON)) {
 				consume();
-				Token name = match(NAME);
-				last = args();
-				//create new prefixexp with name and last = to be implemented
+				List<Exp> list = new ArrayList<Exp>();
+				Token name1 = match(NAME);
+				list.add(new ExpName(name1));
+				list.addAll(args());
+				e0 = new ExpFunctionCall(first, e0, list);
 				
 			}
 		}
