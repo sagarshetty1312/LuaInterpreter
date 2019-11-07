@@ -86,6 +86,4 @@ public interface ASTVisitor {
 
 	Object visitFieldList(FieldList fieldList, Object arg);
 
-	Object visitFunctionCall(FunctionCall functionCall, Object arg);
-
 }

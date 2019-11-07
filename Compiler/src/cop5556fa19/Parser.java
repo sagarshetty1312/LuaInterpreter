@@ -72,7 +72,7 @@ public class Parser {
 
 	final Scanner scanner;
 	Token t;  //invariant:  this is the next token
-
+	Exp varCaseExp = null;
 
 	Parser(Scanner s) throws Exception {
 		this.scanner = s;
@@ -122,16 +122,21 @@ public class Parser {
 		
 		if(isKind(SEMI)) {
 			consume();
-			e0 =  new StatBreak(first);
-			
+			if(checkIfStatFirst(first)) {
+				e0 = stat();
+			}
 		}else if(checkIfVarFirst(first)) {
 			List varList = new ArrayList<Var>();
 			List expList = new ArrayList<Exp>();
-			while (checkIfVarFirst(this.t)) {
+			varList.add(var());
+			while (isKind(COMMA)) {
+				consume();
 				varList.add(var());
 			}
 			match(ASSIGN);
-			while(checkIfExpFirst(this.t)) {
+			expList.add(exp());
+			while(isKind(COMMA)) {
+				consume();
 				expList.add(exp());
 			}
 			e0 =  new StatAssign(first, varList, expList);
@@ -231,7 +236,6 @@ public class Parser {
 			consume();
 			e0 =  new StatFunction(first, funcName(), funcBodyExp());
 			
-			
 		}else if(isKind(KW_local)) {
 			consume();
 			if(isKind(KW_function)) {
@@ -262,6 +266,154 @@ public class Parser {
 			}
 		}
 		return e0;
+	}
+
+
+	public Exp var() throws Exception {
+		Token first = t;
+		Token name = null;
+		Exp prefixExp = null;
+		//Special case for name
+		if(isKind(NAME)) {
+			name = consume();
+			if(checkIfPrefixTailFirst()) {
+				prefixExp = prefixExpForVarWithFirst(new ExpName(name));
+			}else {
+				return new ExpName(name.text);
+			}
+		} else if(isKind(LPAREN)) {
+			prefixExp = prefixExpForVar();
+		} else {
+			error(NAME, LPAREN);
+		}
+		
+		if(varCaseExp != null) {
+			return null;
+			//return with prefixExp and varCaseExp = to be implemented
+		} else {
+			error(LSQUARE,DOT);
+			return null;
+		}
+	}
+
+
+	public Exp prefixExpForVar() throws Exception {
+		Token first = t;
+		if(isKind(LPAREN)) {
+			consume();
+			Exp e0 = exp();
+			match(RPAREN);
+			return prefixExpForVarWithFirst(e0);
+		} else if(isKind(NAME)) {
+			return prefixExpForVarWithFirst(new ExpName(first));
+		}
+		
+		return null;
+	}
+
+
+	public Exp prefixExpForVarWithFirst(Exp exp) throws Exception {
+		Token first = t;
+		Exp last = null;
+		varCaseExp = last;
+		Exp e0 = exp;
+		boolean lSquareFlag = false;
+		boolean dotFlag = false;
+		
+		while(checkIfPrefixTailFirst()) {
+			if(lSquareFlag) {
+				//add last to e0 = to be implemented
+			}else if(dotFlag) {
+				//add last to e0 = to be implemented
+			}
+			
+			if(isKind(LSQUARE)) {
+				consume();
+				lSquareFlag = true;
+				dotFlag = false;
+				last = exp();
+				match(RSQUARE);
+				
+			} else if(isKind(DOT)) {
+				consume();
+				lSquareFlag = false;
+				dotFlag = true;
+				last = new ExpName(match(NAME));
+				
+			} else if((isKind(LPAREN) || isKind(LCURLY) || isKind(STRINGLIT))) {
+				lSquareFlag = false;
+				dotFlag = false;
+				//e0 = new SomeAST args(); = to be implemented
+				
+			} else if(isKind(COLON)) {
+				consume();
+				lSquareFlag = false;
+				dotFlag = false;
+				Token name1 = match(NAME);
+				//e0 = new SomeAST args(); = to be implemented
+				
+			}
+		}
+
+		if(lSquareFlag || dotFlag) {
+			varCaseExp = last;
+		}
+		return e0;
+	}
+
+
+	public Exp args() throws Exception {
+		Token first = t;
+		Exp e0;
+		if(isKind(LPAREN)) {
+			consume();
+			if(checkIfExpFirst(t)) {
+				List<Exp> expList = new ArrayList<Exp>();
+				expList.add(exp());
+				while(isKind(COMMA)) {
+					consume();
+					expList.add(exp());
+				}
+				match(RPAREN);
+				//e0 =  args with expList = to be implemented
+			} else {
+				//e0 = empty args = to be implemented
+			}
+			
+		}else if(isKind(LCURLY)) {
+			e0 = expTableConstructor(); 
+		}else {
+			Token stringLit = consume();
+			//e0 = args with stringlit = to be imlemented
+		}
+		return null;
+	}
+
+
+	public boolean checkIfPrefixTailFirst() {
+		switch (this.t.kind) {
+		case LSQUARE:
+		case DOT:
+		case COLON:
+			return true;
+		}
+		
+		if(checkIfArgsFirst())
+			return true;
+		
+		return false;
+	}
+
+
+	public boolean checkIfArgsFirst() {
+		switch (this.t.kind) {
+		case LPAREN:
+		case LCURLY:
+		case STRINGLIT:
+			return true;
+		}
+		
+		return false;
 	}
 
 
@@ -323,15 +475,12 @@ public class Parser {
 		return false;
 	}
 
-	private boolean checkIfVarFirst(Token token) {
+	public boolean checkIfVarFirst(Token token) {
 		switch (token.kind) {
-		case SEMI:
-			//to implement
+		case NAME:
+		case LPAREN:
 			return true;
 		}
-		
-		if(checkIfVarFirst(token))
-			return true;
 		
 		return false;
 	}
@@ -510,32 +659,68 @@ public class Parser {
 			Token t = match(DOTDOTDOT);
 			e0 = new ExpVarArgs(t);
 		}else if((isKind(NAME)) || (isKind(LPAREN))) {
-			//prefix exp
-			prefixExp();
-			Token t = match(NAME);
-			e0 = new ExpName(t);
-		}else if(isKind(LPAREN)) {//prefix exp
-			Token lp = consume();
-			if(checkIfExpFirst(this.t)) {
-				e0 = exp();
-			}else {
-				error(t.kind);
-				return null;
-			}
-			match(RPAREN);
+			e0 = prefixExp();
 		}else if(isKind(LCURLY)) {
 			/*Tableconstructor*/
-			List fieldList = new ArrayList();
-			consume();
-			if(isKind(RCURLY)) {
-				e0 =  new ExpTable(first, fieldList);
-			}else {
-				fieldList = fieldList();
-				Token c2 = match(RCURLY);
-				e0 =  new ExpTable(first, fieldList);
-			}
+			e0 = expTableConstructor();
 		}else {
 			throw new SyntaxException(first, "");
+		}
+		return e0;
+	}
+
+
+	public Exp prefixExp() throws Exception {
+		Token first = t;
+		Exp e0 = null;
+		Exp last = null;
+		
+		if(isKind(NAME)) {
+			e0 = new ExpName(match(NAME));
+		} else if(isKind(LPAREN)) {
+			consume();
+			e0 = exp();
+			match(RPAREN);
+		}
+		
+		while(checkIfPrefixTailFirst()) {
+			if(isKind(LSQUARE)) {
+				consume();
+				last = exp();
+				match(RSQUARE);
+				//create new prefixexp with last = to be implemented
+				
+			} else if(isKind(DOT)) {
+				consume();
+				last = new ExpName(match(NAME));
+				//create new prefixexp with last = to be implemented
+			} else if((isKind(LPAREN) || isKind(LCURLY) || isKind(STRINGLIT))) {
+				last = args();
+				//create new prefixexp with last = to be implemented
+				
+			} else if(isKind(COLON)) {
+				consume();
+				Token name = match(NAME);
+				last = args();
+				//create new prefixexp with name and last = to be implemented
+				
+			}
+		}
+		return e0;
+	}
+
+
+	public Exp expTableConstructor() throws Exception {
+		Token first = t;
+		Exp e0;
+		List fieldList = new ArrayList();
+		consume();
+		if(isKind(RCURLY)) {
+			e0 =  new ExpTable(first, fieldList);
+		}else {
+			fieldList = fieldList();
+			Token c2 = match(RCURLY);
+			e0 =  new ExpTable(first, fieldList);
 		}
 		return e0;
 	}

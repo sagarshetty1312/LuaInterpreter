@@ -3,8 +3,6 @@ package cop5556fa19.AST;
 import cop5556fa19.Token;
 
 public class StatBreak extends Stat {
-	
-	public static final StatBreak statBreakConst = new StatBreak(null);
 
 	public StatBreak(Token firstToken) {
 		super(firstToken);
