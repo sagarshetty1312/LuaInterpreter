@@ -1,7 +1,8 @@
 package cop5556fa19.AST;
 
+import static cop5556fa19.Token.Kind.KW_false;
+
 import cop5556fa19.Token;
-import cop5556fa19.Token.Kind;
 
 public class ExpFalse extends Exp {
 
@@ -9,7 +10,7 @@ public class ExpFalse extends Exp {
 		super(firstToken);
 	}
 	
-	public static final ExpFalse constantFalse = new ExpFalse(new Token(Kind.KW_false,"false",0,0));
+	public static final ExpFalse constantFalse = new ExpFalse(new Token(KW_false,"false",0,0));
 
 	@Override
 	public String toString() {

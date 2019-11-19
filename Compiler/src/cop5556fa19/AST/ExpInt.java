@@ -1,5 +1,7 @@
 package cop5556fa19.AST;
 
+import static cop5556fa19.Token.Kind.*;
+
 import cop5556fa19.Token;
 
 public class ExpInt extends Exp {

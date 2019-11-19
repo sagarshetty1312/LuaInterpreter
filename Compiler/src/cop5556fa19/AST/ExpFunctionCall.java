@@ -1,14 +1,23 @@
 package cop5556fa19.AST;
 
-import cop5556fa19.Token;
 import java.util.List;
+
+import cop5556fa19.Token;
 
 public class ExpFunctionCall extends Exp {
 	
 	public final Exp f;
 	public final List<Exp> args;
+	int lexicalDiff = -3;  //illegal value to indicate lack of initialization
 	
-	
+
+	public int getLexicalDiff() {
+		return lexicalDiff;
+	}
+
+	public void setLexicalDiff(int lexicalDiff) {
+		this.lexicalDiff = lexicalDiff;
+	}
 
 	public ExpFunctionCall(Token firstToken, Exp f, List<Exp> args) {
 		super(firstToken);

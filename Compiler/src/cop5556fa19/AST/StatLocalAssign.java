@@ -17,7 +17,7 @@ public class StatLocalAssign extends Stat {
 
 	@Override
 	public String toString() {
-		return "StatLocalAssign [nameList=" + nameList + ", expList=" + expList + ", firstToken=" + firstToken + "]";
+		return "StatLocalAssign [nameList=" + nameList + ", expList=" + expList + "]";
 	}
 
 	@Override

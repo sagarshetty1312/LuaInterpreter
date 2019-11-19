@@ -6,6 +6,7 @@ public class StatFunction extends Stat {
 
 	public final FuncName name;
 	public final FuncBody body;
+	int numLocals;
 
 	public StatFunction(Token firstToken, FuncName name, FuncBody body) {
 		super(firstToken);
@@ -13,10 +14,14 @@ public class StatFunction extends Stat {
 		this.body = body;
 	}
 
+
+
 	@Override
 	public String toString() {
-		return "StatFunction [name=" + name + ", body=" + body + ", firstToken=" + firstToken + "]";
+		return "StatFunction [name=" + name + ", body=" + body + ", numLocals=" + numLocals + "]";
 	}
+
+
 
 	@Override
 	public int hashCode() {
@@ -54,4 +59,13 @@ public class StatFunction extends Stat {
 		return v.visitStatFunction(this, arg);
 	}
 
+	public int getNumLocals() {
+		return numLocals;
+	}
+
+	public void setNumLocals(int numLocals) {
+		this.numLocals = numLocals;
+	}
+
+	
 }

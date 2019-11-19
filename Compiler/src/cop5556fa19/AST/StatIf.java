@@ -1,12 +1,13 @@
 package cop5556fa19.AST;
 
 import java.util.List;
+
 import cop5556fa19.Token;
 
 public class StatIf extends Stat {
 
-	List<Exp> es;
-	List<Block> bs;
+	public final List<Exp> es;
+	public final List<Block> bs;
 
 	public StatIf(Token firstToken, List<Exp> es, List<Block> bs) {
 		super(firstToken);

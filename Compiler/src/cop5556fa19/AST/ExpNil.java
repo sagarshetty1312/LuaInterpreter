@@ -1,11 +1,12 @@
 package cop5556fa19.AST;
 
+import static cop5556fa19.Token.Kind.*;
+
 import cop5556fa19.Token;
-import cop5556fa19.Token.Kind;
 
 public class ExpNil extends Exp {
 	
-	public static final ExpNil expNilConst = new ExpNil(new Token(Kind.KW_nil,"nil",0,0));
+	public static final ExpNil expNilConst = new ExpNil(new Token(KW_nil,"nil",0,0));
 
 	public ExpNil(Token firstToken) {
 		super(firstToken);

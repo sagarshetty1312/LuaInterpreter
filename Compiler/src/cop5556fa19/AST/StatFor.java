@@ -4,11 +4,11 @@ import cop5556fa19.Token;
 
 public class StatFor extends Stat {
 
-	ExpName name;
-	Exp ebeg;
-	Exp eend;
-	Exp einc;
-	Block g;
+	public final ExpName name;
+	public final Exp ebeg;
+	public final Exp eend;
+	public final Exp einc;
+	public final Block g;
 
 	public StatFor(Token firstToken, ExpName n, Exp ebeg, Exp eend, Exp einc, Block g) {
 		super(firstToken);
@@ -76,7 +76,7 @@ public class StatFor extends Stat {
 
 	@Override
 	public Object visit(ASTVisitor v, Object arg) throws Exception {
-		return v.visitStatFor1(this, arg);
+		return v.visitStatFor(this, arg);
 	}
 
 }

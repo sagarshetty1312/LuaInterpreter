@@ -4,16 +4,35 @@ import cop5556fa19.Token;
 
 public class StatLabel extends Stat {
 	
-	Name label;
+	public final Name label;
+	Block enclosingBlock;  //block where label appears
+	public int index;             //index of label in statement list
 	
-	public StatLabel(Token firstToken, Name label) {
-		super(firstToken);
-		this.label = label;
-	}
+//	public StatLabel(Token firstToken, Name label) {
+//		super(firstToken);
+//		this.label = label;
+//		Block parent;
+//		int index;  
+//	}
+	
+	
+
+//	@Override
+//	public String toString() {
+//		return "StatLabel [label=" + label + "]";
+//	}
+
+	
+	public StatLabel(Token firstToken, Name label, Block enclosingBlock, int index) {
+	super(firstToken);
+	this.label = label;
+	this.enclosingBlock = enclosingBlock;
+	this.setIndex(index);
+}
 
 	@Override
 	public String toString() {
-		return "StatLabel [label=" + label + "]";
+		return "StatLabel [label=" + label +  ", index=" + getIndex() + "]";
 	}
 
 	@Override
@@ -44,6 +63,14 @@ public class StatLabel extends Stat {
 	@Override
 	public Object visit(ASTVisitor v, Object arg) throws Exception {
 		return v.visitLabel(this,arg);
+	}
+
+	public int getIndex() {
+		return index;
+	}
+
+	public void setIndex(int index) {
+		this.index = index;
 	}
 
 }

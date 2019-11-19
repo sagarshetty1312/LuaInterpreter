@@ -78,7 +78,7 @@ public class Parser {
 	Token t;  //invariant:  this is the next token
 	Exp varCaseExp = null;
 
-	Parser(Scanner s) throws Exception {
+	public Parser(Scanner s) throws Exception {
 		this.scanner = s;
 		t = scanner.getNext(); //establish invariant
 	}
@@ -153,7 +153,8 @@ public class Parser {
 				name = consume();
 			}
 			match(COLONCOLON);
-			e0 =  new StatLabel(first, new Name(first, name.text));
+			//e0 =  new StatLabel(first, new Name(first, name.text));
+			e0 =  new StatLabel(first, new Name(first, name.text), null, 0);//to be implemented
 			
 		}else if(isKind(KW_break)) {
 			consume();

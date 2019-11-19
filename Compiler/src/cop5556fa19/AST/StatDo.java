@@ -4,7 +4,7 @@ import cop5556fa19.Token;
 
 public class StatDo extends Stat {
 
-	Block b;
+	public final Block b;
 
 	public StatDo(Token firstToken, Block b) {
 		super(firstToken);
@@ -13,7 +13,7 @@ public class StatDo extends Stat {
 
 	@Override
 	public String toString() {
-		return "StatDo [b=" + b + ", firstToken=" + firstToken + "]";
+		return "StatDo [b=" + b + "]";
 	}
 
 	@Override

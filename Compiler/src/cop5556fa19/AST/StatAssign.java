@@ -6,8 +6,8 @@ import cop5556fa19.Token;
 
 public class StatAssign extends Stat {
 	
-	List<Exp>  varList;
-	List<Exp>  expList;
+	public final List<Exp>  varList;
+	public final List<Exp>  expList;
 	
 	
 

@@ -5,6 +5,8 @@ import cop5556fa19.Token;
 public class StatGoto extends Stat {
 
 	public final Name name;
+	
+	public StatLabel label;  //ASTNode of label to jump to
 
 	public StatGoto(Token firstToken, Name name) {
 		super(firstToken);
@@ -13,7 +15,7 @@ public class StatGoto extends Stat {
 
 	@Override
 	public String toString() {
-		return "StatGoto [name=" + name + ", firstToken=" + firstToken + "]";
+		return "StatGoto [name=" + name + ", label=" + label + "]";
 	}
 
 	@Override
