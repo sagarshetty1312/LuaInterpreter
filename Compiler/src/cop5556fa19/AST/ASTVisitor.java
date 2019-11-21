@@ -81,6 +81,4 @@ public interface ASTVisitor {
 
 	Object visitExpName(ExpName expName, Object arg) throws Exception;
 
-	Object visitTableDeref(TableDeref tableDeref, Object arg);
-
 }

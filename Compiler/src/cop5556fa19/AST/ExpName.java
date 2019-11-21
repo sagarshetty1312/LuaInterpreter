@@ -2,9 +2,9 @@ package cop5556fa19.AST;
 
 import static cop5556fa19.Token.Kind.*;
 
-import cop5556fa19.SymbolTable;
+//import cop5556fa19.SymbolTable;
 import cop5556fa19.Token;
-import cop5556fa19.SymbolTable.SymbolTableEntry;
+//import cop5556fa19.SymbolTable.SymbolTableEntry;
 
 public class ExpName extends Exp {
 

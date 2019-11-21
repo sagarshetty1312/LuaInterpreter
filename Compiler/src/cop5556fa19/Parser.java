@@ -58,7 +58,6 @@ import cop5556fa19.AST.StatLocalAssign;
 import cop5556fa19.AST.StatLocalFunc;
 import cop5556fa19.AST.StatRepeat;
 import cop5556fa19.AST.StatWhile;
-import cop5556fa19.AST.Var;
 import cop5556fa19.Token.Kind;
 import static cop5556fa19.Token.Kind.*;
 import static org.junit.Assert.assertNotNull;
@@ -86,7 +85,11 @@ public class Parser {
 
 	public Chunk parse() throws Exception {
 		Token first = t;
-		return new Chunk(first, block());
+		Block b = block();
+		if(!isKind(EOF)) {
+			throw new SyntaxException(first, "Expected end of file");
+		}
+		return new Chunk(first, b);
 	}
 	
 	public Block block() throws Exception {
@@ -130,7 +133,7 @@ public class Parser {
 				e0 = stat();
 			}
 		}else if(checkIfVarFirst(first)) {
-			List varList = new ArrayList<Var>();
+			List varList = new ArrayList<Exp>();
 			List expList = new ArrayList<Exp>();
 			varList.add(var());
 			while (isKind(COMMA)) {

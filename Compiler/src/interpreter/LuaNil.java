@@ -20,5 +20,5 @@ public class LuaNil extends LuaValue {
 		return nil;
 	}
 	
-	private LuaNil() {}
+	public LuaNil() {}
 }

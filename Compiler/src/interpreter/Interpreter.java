@@ -1,12 +1,16 @@
 package interpreter;
 
 import java.io.Reader;
-
+import java.util.ArrayList;
 import java.util.List;
 
-import cop5556fa19.BuildSymbolTable;
+import com.sun.org.apache.bcel.internal.generic.INSTANCEOF;
+import com.sun.org.apache.xpath.internal.functions.FuncRound;
+
+//import cop5556fa19.BuildSymbolTable;
 import cop5556fa19.Parser;
 import cop5556fa19.Scanner;
+import cop5556fa19.Token.Kind;
 import cop5556fa19.AST.*;
 import interpreter.built_ins.print;
 import interpreter.built_ins.println;
@@ -49,23 +53,603 @@ public class Interpreter extends ASTVisitorAdapter{
 		Chunk chunk = parser.parse();
 		root = chunk;
 		//Perform static analysis to prepare for goto.  Uncomment after u
-//		StaticAnalysis hg = new StaticAnalysis();
-//		chunk.visit(hg,null);	
+		StaticAnalysis hg = new StaticAnalysis();
+		chunk.visit(hg,null);	
 		//Interpret the program and return values returned from chunk.visit
 		List<LuaValue> vals = (List<LuaValue>) chunk.visit(this,_G);
 		return vals;
 	}
 
-
+	@Override
+	public Object visitChunk(Chunk chunk, Object arg) throws Exception {
+		Block block = chunk.block;
+		return block.visit(this, arg);
+	}
 
 	@Override
-	public Object visitTableDeref(TableDeref tableDeref, Object arg) {
-		// TODO Auto-generated method stub
+	public Object visitBlock(Block block, Object arg) throws Exception {
+		for(Stat stat : block.stats) {
+			if(stat instanceof RetStat) {
+				RetStat retStat = (RetStat)stat;
+				return retStat.visit(this, arg);
+				
+			} else if(stat instanceof StatAssign) {
+				StatAssign statAssign = (StatAssign)stat;
+				statAssign.visit(this, arg);
+				
+			} else if (stat instanceof StatLabel) {
+				//to be implemented
+			} else if (stat instanceof StatBreak) {
+				//to be implemented
+			} else if(stat instanceof StatGoto) {
+				//to be implemented
+			} else if(stat instanceof StatDo) {
+				StatDo statDo = (StatDo)stat;
+				List<LuaValue> retList = (List<LuaValue>) statDo.visit(this, arg);
+				if(retList.size() != 0) {
+					return retList;
+				}
+				
+			} else if(stat instanceof StatWhile) {
+				//to be implemented
+			} else if(stat instanceof StatRepeat) {
+				//to be implemented
+			} else if(stat instanceof StatIf) {
+				StatIf statIf = (StatIf)stat;
+				statIf.visit(this, arg);
+				//to be implemented
+			} else if(stat instanceof StatFor) {
+				//to be implemented
+			} else if(stat instanceof StatForEach) {
+				//to be implemented
+			} else if(stat instanceof StatFunction) {
+				//to be implemented
+			} else if(stat instanceof StatLocalFunc) {
+				//to be implemented
+			} else if(stat instanceof StatLocalAssign) {
+				//to be implemented
+			}
+			System.out.println(stat.toString());
+		}
+		return null;
+	}
+
+	@Override
+	public Object visitRetStat(RetStat retStat, Object arg) throws Exception {
+		List<LuaValue> list = new ArrayList<LuaValue>();
+		for(Exp exp : retStat.el) {
+			if (exp instanceof ExpName) {
+				ExpName expName = (ExpName)exp;
+				list.add(_G.get((LuaValue) expName.visit(this, arg)));
+				
+			} else {
+				list.add(visitExp(exp, arg));
+			}
+		}
+		
+		return list;
+	}
+
+	public LuaValue visitExp(Exp exp, Object arg) throws Exception {
+		if(exp instanceof ExpNil) {
+			ExpNil expNil = (ExpNil)exp;
+			return (LuaValue) expNil.visit(this, arg);
+			
+		} else if(exp instanceof ExpFalse) {
+			ExpFalse expFalse = (ExpFalse)exp;
+			return (LuaValue) expFalse.visit(this, arg);
+			
+		} else if (exp instanceof ExpTrue) {
+			ExpTrue expTrue= (ExpTrue)exp;
+			return (LuaValue) expTrue.visit(this, arg);
+			
+		} else if (exp instanceof ExpInt) {
+			ExpInt expInt = (ExpInt)exp;
+			return (LuaValue) expInt.visit(this, arg);
+			
+		} else if (exp instanceof ExpString) {
+			ExpString expString = (ExpString)exp;
+			return (LuaValue) expString.visit(this, arg);
+			
+		} else if (exp instanceof ExpVarArgs) {
+			ExpVarArgs expVarArgs = (ExpVarArgs)exp;
+			return (LuaValue) expVarArgs.visit(this, arg);
+			//to be implemented
+		} else if (exp instanceof ExpFunction) {
+			//to be implemented
+		} else if (exp instanceof ExpName) {
+			ExpName expName = (ExpName)exp;
+			return (LuaValue)expName.visit(this, arg);
+		} else if (exp instanceof ExpTableLookup) {
+			//to be implemented
+		} else if (exp instanceof ExpFunctionCall) {
+			//to be implemented
+		} else if (exp instanceof ExpTable) {
+			//to be implemented
+		} else if (exp instanceof ExpBinary) {
+			ExpBinary expBin = (ExpBinary)exp;
+			return (LuaValue) expBin.visit(this, arg);
+		}
+		return new LuaNil();
+	}
+
+	public List<LuaValue> visitExpList(List<Exp> expList, Object arg) throws Exception {
+		List<LuaValue> list = new ArrayList<LuaValue>();
+		for(Exp exp : expList) {
+			list.add(visitExp(exp, arg));
+		}
+		return list;
+	}
+
+	@Override
+	public Object visitStatAssign(StatAssign statAssign, Object arg) throws Exception {
+		if(statAssign.varList.size() == statAssign.expList.size()) {
+			LuaString []varList = new LuaString[statAssign.varList.size()];
+			int count = 0;
+			for(Exp var : statAssign.varList) {
+				if(var instanceof ExpName) {
+					ExpName expName = (ExpName)var;
+					varList[count++] = new LuaString(expName.name);
+				} else if(var instanceof ExpTableLookup) {
+					ExpTableLookup expTableLookup = (ExpTableLookup)var;
+					varList[count++] = (LuaString) expTableLookup.visit(this, arg);
+				} else {
+					throw new StaticSemanticException(var.firstToken, "Expected variable.");
+				}
+			}
+			
+			count = 0;
+			List<LuaValue> expList = visitExpList(statAssign.expList, arg);
+			for(LuaString ls : varList) {
+				_G.put(ls, expList.get(count++));
+			}
+			
+		}else {
+			throw new StaticSemanticException(statAssign.firstToken, "Number of variables does not match the left hand side.");
+		}
+		return null;
+	}
+
+	@Override
+	public Object visitExpInt(ExpInt expInt, Object arg) {
+		LuaInt luaInt = new LuaInt(expInt.v);
+		return luaInt;
+	}
+
+	@Override
+	public LuaValue visitName(Name name, Object arg) {
+		LuaString luaString = new LuaString(name.name);
+		return luaString;
+	}
+
+	@Override
+	public Object visitExpName(ExpName expName, Object arg) {
+		LuaString luaString = new LuaString(expName.name);
+		return _G.get(luaString);
+	}
+
+	@Override
+	public Object visitExpTableLookup(ExpTableLookup expTableLookup, Object arg) throws Exception {
+		// to be implemented
 		return null;
 	}
 	
+	@Override
+	public Object visitExpNil(ExpNil expNil, Object arg) {
+		return new LuaNil();
+	}
+
+	@Override
+	public Object visitExpTrue(ExpTrue expTrue, Object arg) {
+		return new LuaBoolean(true);
+	}
+
+	@Override
+	public Object visitExpFalse(ExpFalse expFalse, Object arg) {
+		return new LuaBoolean(false);
+	}
+
+	@Override
+	public Object visitExpString(ExpString expString, Object arg) {
+		return new LuaString(expString.v);
+	}
+
+	@Override
+	public Object visitExpVarArgs(ExpVarArgs expVarArgs, Object arg) {
+		//To be implemented
+		return null;
+	}
+
+	@Override
+	public Object visitExpBin(ExpBinary expBin, Object arg) throws Exception {
+		LuaValue e0 = visitExp(expBin.e0, arg);
+		LuaValue e1 = visitExp(expBin.e1, arg);
+		Kind opKind = expBin.op;
+		if((e0 instanceof LuaNil) && (e1 instanceof LuaNil)) {
+			return e0;
+			
+		} else if((e0 instanceof LuaInt) && (e1 instanceof LuaInt)) {
+			return executeOperations((LuaInt)e0, (LuaInt)e1, opKind);
+			
+		} else if((e0 instanceof LuaBoolean) && (e1 instanceof LuaBoolean)) {
+			return executeOperations((LuaBoolean)e0, (LuaBoolean)e1, opKind);
+			
+		} else if((e0 instanceof LuaString) && (e1 instanceof LuaString)) {
+			return executeOperations((LuaString)e0, (LuaString)e1, opKind);
+			
+		} else if((e0 instanceof LuaTable) && (e1 instanceof LuaTable)) {
+			//to be implemented
+		} else {
+			throw new StaticSemanticException(expBin.firstToken, "Incompatible operands");
+		}
+		return new LuaNil();
+	}
+
+	public LuaValue executeOperations(LuaString e0, LuaString e1, Kind opKind) {
+		switch (opKind) {
+		case OP_PLUS:
+			return new LuaString(e0.value + e1.value);
+		case OP_MINUS:
+			break;
+		case OP_TIMES:
+			break;
+		case OP_DIV:
+			break;
+		case OP_DIVDIV:
+			break;
+		case OP_POW:
+			break;
+		case OP_MOD:
+			break;
+		case BIT_AMP:
+			//& to be implemented
+			break;
+		case BIT_XOR:
+			//~ to be implemented
+			break;
+		case BIT_OR:
+			// | to be implemented
+			break;
+		case BIT_SHIFTL:
+			break;
+		case BIT_SHIFTR:
+			break;
+		case DOTDOT:
+			return new LuaString(e0.value + e1.value);
+		case REL_LT:
+			//to be implemented
+			break;
+		case REL_LE:
+			//to be implemented
+			break;
+		case REL_GT:
+			//to be implemented
+			break;
+		case REL_GE:
+			//to be implemented
+			break;
+		case REL_EQEQ:
+			if(e0.equals(e1))
+				return new LuaBoolean(true);
+			else
+				return new LuaBoolean(false);
+		case REL_NOTEQ:
+			if(!e0.equals(e1))
+				return new LuaBoolean(true);
+			else
+				return new LuaBoolean(false);
+		case KW_and:
+			//to be implemented
+			break;
+		case KW_or:
+			//to be implemented
+			break;
+		default:
+			break;
+		}
+		return new LuaNil();
+	}
 
 
-	
+
+	public LuaValue executeOperations(LuaBoolean e0, LuaBoolean e1, Kind opKind) {
+		switch (opKind) {
+		case OP_PLUS:
+			break;
+		case OP_MINUS:
+			break;
+		case OP_TIMES:
+			break;
+		case OP_DIV:
+			break;
+		case OP_DIVDIV:
+			break;
+		case OP_POW:
+			break;
+		case OP_MOD:
+			break;
+		case BIT_AMP:
+			//& to be implemented
+			break;
+		case BIT_XOR:
+			//~ to be implemented
+			break;
+		case BIT_OR:
+			// | to be implemented
+			break;
+		case BIT_SHIFTL:
+			break;
+		case BIT_SHIFTR:
+			break;
+		case DOTDOT:
+			break;
+		case REL_LT:
+			break;
+		case REL_LE:
+			break;
+		case REL_GT:
+			break;
+		case REL_GE:
+			break;
+		case REL_EQEQ:
+			if(e0.value == e1.value)
+				return new LuaBoolean(true);
+			else
+				return new LuaBoolean(false);
+		case REL_NOTEQ:
+			if(e0.value != e1.value)
+				return new LuaBoolean(true);
+			else
+				return new LuaBoolean(false);
+		case KW_and:
+			return new LuaBoolean(e0.value && e1.value);
+		case KW_or:
+			return new LuaBoolean(e0.value || e1.value);
+		default:
+			break;
+		}
+		return new LuaNil();
+	}
+
+
+
+	public LuaValue executeOperations(LuaInt e0, LuaInt e1, Kind opKind) {
+		switch (opKind) {
+		case OP_PLUS:
+			return new LuaInt(e0.v + e1.v);
+		case OP_MINUS:
+			return new LuaInt(e0.v - e1.v);
+		case OP_TIMES:
+			return new LuaInt(e0.v * e1.v);
+		case OP_DIV:
+			return new LuaInt(e0.v / e1.v);
+		case OP_DIVDIV:
+			return new LuaInt(Math.floorDiv(e0.v, e1.v));
+		case OP_POW:
+			return new LuaInt((int) Math.pow(e0.v, e1.v));
+		case OP_MOD:
+			return new LuaInt(e0.v % e1.v);
+		case BIT_AMP:
+			//& to be implemented
+			break;
+		case BIT_XOR:
+			//~ to be implemented
+			break;
+		case BIT_OR:
+			// | to be implemented
+			break;
+		case BIT_SHIFTL:
+			return new LuaInt(e0.v << e1.v);
+		case BIT_SHIFTR:
+			return new LuaInt(e0.v >> e1.v);
+		case DOTDOT:
+			return new LuaString(String.valueOf(e0.v) + String.valueOf(e1.v));
+		case REL_LT:
+			if(e0.v < e1.v)
+				return new LuaBoolean(true);
+			else
+				return new LuaBoolean(false);
+		case REL_LE:
+			if(e0.v <= e1.v)
+				return new LuaBoolean(true);
+			else
+				return new LuaBoolean(false);
+		case REL_GT:
+			if(e0.v > e1.v)
+				return new LuaBoolean(true);
+			else
+				return new LuaBoolean(false);
+		case REL_GE:
+			if(e0.v >= e1.v)
+				return new LuaBoolean(true);
+			else
+				return new LuaBoolean(false);
+		case REL_EQEQ:
+			if(e0.v == e1.v)
+				return new LuaBoolean(true);
+			else
+				return new LuaBoolean(false);
+		case REL_NOTEQ:
+			if(e0.v != e1.v)
+				return new LuaBoolean(true);
+			else
+				return new LuaBoolean(false);
+		case KW_and:
+			//to be implemented
+			break;
+		case KW_or:
+			//to be implemented
+			break;
+		default:
+			break;
+		}
+		return new LuaNil();
+	}
+
+
+
+	@Override
+	public Object visitStatDo(StatDo statDo, Object arg) throws Exception {
+		Block b = statDo.b;
+		return b.visit(this, arg);
+	}
+
+	@Override
+	public Object visitStatIf(StatIf statIf, Object arg) throws Exception {
+		List<Exp> eList = statIf.es;
+		List<Block> bList = statIf.bs;
+		int	count = 0;
+		for(Exp exp : eList) {
+			if((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0)))){
+				Block block = bList.get(count);
+				return block.visit(this, arg);
+			}
+			count++;
+		}
+		if(bList.size() > eList.size()) {
+			Block block = bList.get(count);
+			return block.visit(this, arg);
+		}else{
+			return new LuaNil();
+		}
+	}
+
+	@Override
+	public Object visitUnExp(ExpUnary unExp, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitExpTable(ExpTable expTableConstr, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitExpList(ExpList expList, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitParList(ParList parList, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitFunDef(ExpFunction funcDec, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+	@Override
+	public Object visitStatBreak(StatBreak statBreak, Object arg, Object arg2) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitStatBreak(StatBreak statBreak, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitStatGoto(StatGoto statGoto, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitStatWhile(StatWhile statWhile, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitStatRepeat(StatRepeat statRepeat, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitStatFor(StatFor statFor1, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitStatForEach(StatForEach statForEach, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitFuncName(FuncName funcName, Object arg) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitStatFunction(StatFunction statFunction, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitStatLocalFunc(StatLocalFunc statLocalFunc, Object arg) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitStatLocalAssign(StatLocalAssign statLocalAssign, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	@Override
+	public Object visitFieldExpKey(FieldExpKey fieldExpKey, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitFieldNameKey(FieldNameKey fieldNameKey, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitFieldImplicitKey(FieldImplicitKey fieldImplicitKey, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitFuncBody(FuncBody funcBody, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitExpFunctionCall(ExpFunctionCall expFunctionCall, Object arg) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitLabel(StatLabel statLabel, Object ar) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object visitFieldList(FieldList fieldList, Object arg) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
 }
