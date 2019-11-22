@@ -34,7 +34,7 @@ public class LuaBoolean extends LuaValue {
 			return false;
 		return true;
 	}
-	
-	
-	
+
+
+	public String toString() { return Boolean.toString(value); }
 }

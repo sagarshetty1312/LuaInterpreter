@@ -88,6 +88,63 @@ public class Interpreter extends ASTVisitorAdapter{
 		return retList;
 	}
 
+	public Object visitStatList(List<Stat> list, List<LuaValue> retList, Object arg) throws Exception {
+		for(Stat stat : list) {
+			if(stat instanceof RetStat) {
+				RetStat retStat = (RetStat)stat;
+				return retStat.visit(this, arg);
+				
+			} else if(stat instanceof StatAssign) {
+				StatAssign statAssign = (StatAssign)stat;
+				statAssign.visit(this, arg);
+				
+			} else if (stat instanceof StatLabel) {
+				//do nothing
+			} else if (stat instanceof StatBreak) {
+				retList.add(new LuaBreak());
+				return retList;
+				
+			} else if(stat instanceof StatGoto) {
+				StatGoto sg = (StatGoto)stat;
+				retList = (List<LuaValue>) sg.visit(this, arg);
+				break;
+				
+			} else if(stat instanceof StatDo) {
+				StatDo statDo = (StatDo)stat;
+				retList = (List<LuaValue>) statDo.visit(this, arg);
+				
+			} else if(stat instanceof StatWhile) {
+				StatWhile statWhile = (StatWhile)stat;
+				retList = (List<LuaValue>) statWhile.visit(this, statWhile);
+				
+			} else if(stat instanceof StatRepeat) {
+				StatRepeat statRepeat = (StatRepeat)stat;
+				retList = (List<LuaValue>) statRepeat.visit(this, statRepeat);
+				
+			} else if(stat instanceof StatIf) {
+				StatIf statIf = (StatIf)stat;
+				retList = (List<LuaValue>) statIf.visit(this, arg);
+				
+			} else if(stat instanceof StatFor) {
+				//to be implemented
+			} else if(stat instanceof StatForEach) {
+				//to be implemented
+			} else if(stat instanceof StatFunction) {
+				//to be implemented
+			} else if(stat instanceof StatLocalFunc) {
+				//to be implemented
+			} else if(stat instanceof StatLocalAssign) {
+				//to be implemented
+			}
+			
+
+			if(retList.size() != 0) {
+				return retList;
+			}
+		}
+		return retList;
+	}
+
 	@Override
 	public Object visitRetStat(RetStat retStat, Object arg) throws Exception {
 		List<LuaValue> list = new ArrayList<LuaValue>();
@@ -147,7 +204,7 @@ public class Interpreter extends ASTVisitorAdapter{
 		} else if (exp instanceof ExpFunctionCall) {
 			ExpFunctionCall efc = (ExpFunctionCall)exp;
 			return (LuaValue)efc.visit(this, arg);
-			//to be implemented
+			
 		} else if (exp instanceof ExpTable) {
 			ExpTable expTable = (ExpTable) exp;
 			return (LuaTable) expTable.visit(this, arg);
@@ -281,6 +338,12 @@ public class Interpreter extends ASTVisitorAdapter{
 		} else if((e0 instanceof LuaString) && (e1 instanceof LuaString)) {
 			return executeOperations((LuaString)e0, (LuaString)e1, opKind);
 			
+		} else if((e0 instanceof LuaString) && (e1 instanceof LuaInt)) {
+			return executeOperations(new LuaInt(Integer.parseInt(((LuaString)e0).value)), (LuaInt)e1, opKind);
+			
+		} else if((e0 instanceof LuaInt) && (e1 instanceof LuaString)) {
+			return executeOperations((LuaInt)e0, new LuaInt(Integer.parseInt(((LuaString)e1).value)), opKind);
+			
 		} else if((e0 instanceof LuaTable) && (e1 instanceof LuaTable)) {
 			//to be implemented
 		} else {
@@ -356,7 +419,12 @@ public class Interpreter extends ASTVisitorAdapter{
 		List<LuaValue> retList = (List<LuaValue>) b.visit(this, arg);
 		if((retList.size() != 0)) {
 			if(retList.get(0) instanceof LuaBreak) {
-				retList.remove(0);
+				if((arg instanceof StatWhile) || (arg instanceof StatRepeat)) {
+					return retList;
+				} else {
+					retList.remove(0);
+					return retList;
+				}
 			} 
 		}
 		return retList;
@@ -407,6 +475,7 @@ public class Interpreter extends ASTVisitorAdapter{
 			if((list.size() != 0)) {
 				if(list.get(0) instanceof LuaBreak) {
 					list.remove(0);
+					break;
 				}
 				return list; 
 			}
@@ -426,6 +495,7 @@ public class Interpreter extends ASTVisitorAdapter{
 			if((list.size() != 0)) {
 				if(list.get(0) instanceof LuaBreak) {
 					list.remove(0);
+					break;
 				}
 				return list; 
 			}
@@ -463,63 +533,6 @@ public class Interpreter extends ASTVisitorAdapter{
 		List<LuaValue> retList = new ArrayList<LuaValue>();
 		retList = (List<LuaValue>) visitStatList(list, retList, arg);
 		
-		return retList;
-	}
-
-	public Object visitStatList(List<Stat> list, List<LuaValue> retList, Object arg) throws Exception {
-		for(Stat stat : list) {
-			if(stat instanceof RetStat) {
-				RetStat retStat = (RetStat)stat;
-				return retStat.visit(this, arg);
-				
-			} else if(stat instanceof StatAssign) {
-				StatAssign statAssign = (StatAssign)stat;
-				statAssign.visit(this, arg);
-				
-			} else if (stat instanceof StatLabel) {
-				//do nothing
-			} else if (stat instanceof StatBreak) {
-				retList.add(new LuaBreak());
-				return retList;
-				
-			} else if(stat instanceof StatGoto) {
-				StatGoto sg = (StatGoto)stat;
-				retList = (List<LuaValue>) sg.visit(this, arg);
-				break;
-				
-			} else if(stat instanceof StatDo) {
-				StatDo statDo = (StatDo)stat;
-				retList = (List<LuaValue>) statDo.visit(this, arg);
-				
-			} else if(stat instanceof StatWhile) {
-				StatWhile statWhile = (StatWhile)stat;
-				retList = (List<LuaValue>) statWhile.visit(this, arg);
-				
-			} else if(stat instanceof StatRepeat) {
-				StatRepeat statRepeat = (StatRepeat)stat;
-				retList = (List<LuaValue>) statRepeat.visit(this, arg);
-				
-			} else if(stat instanceof StatIf) {
-				StatIf statIf = (StatIf)stat;
-				retList = (List<LuaValue>) statIf.visit(this, arg);
-				
-			} else if(stat instanceof StatFor) {
-				//to be implemented
-			} else if(stat instanceof StatForEach) {
-				//to be implemented
-			} else if(stat instanceof StatFunction) {
-				//to be implemented
-			} else if(stat instanceof StatLocalFunc) {
-				//to be implemented
-			} else if(stat instanceof StatLocalAssign) {
-				//to be implemented
-			}
-			
-
-			if(retList.size() != 0) {
-				return retList;
-			}
-		}
 		return retList;
 	}
 
@@ -728,104 +741,104 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	@Override
 	public Object visitExpList(ExpList expList, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitParList(ParList parList, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitFunDef(ExpFunction funcDec, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 
 	@Override
 	public Object visitStatBreak(StatBreak statBreak, Object arg, Object arg2) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitStatBreak(StatBreak statBreak, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitStatFor(StatFor statFor1, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitStatForEach(StatForEach statForEach, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitFuncName(FuncName funcName, Object arg) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitStatFunction(StatFunction statFunction, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitStatLocalFunc(StatLocalFunc statLocalFunc, Object arg) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitStatLocalAssign(StatLocalAssign statLocalAssign, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 	@Override
 	public Object visitFieldExpKey(FieldExpKey fieldExpKey, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitFieldNameKey(FieldNameKey fieldNameKey, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitFieldImplicitKey(FieldImplicitKey fieldImplicitKey, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitFuncBody(FuncBody funcBody, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitLabel(StatLabel statLabel, Object ar) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 	@Override
 	public Object visitFieldList(FieldList fieldList, Object arg) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
+		
 	}
 
 }
