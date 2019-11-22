@@ -17,12 +17,12 @@ public class toNumber extends JavaFunction {
 		List<LuaValue> retList = new ArrayList<>();
 		if (arg instanceof LuaInt) { 
 			retList.add(arg);
-		}
-		if (arg instanceof LuaString) {
+		}else if (arg instanceof LuaString) {
 			int num = Integer.parseInt(((LuaString)arg).value);
 			retList.add(new LuaInt(num));
-		}
-		throw new TypeException("Cannot convert " + arg + "to a number");
+		}else
+			throw new TypeException("Cannot convert " + arg + "to a number");
+		return retList;
 	}
 
 	@Override

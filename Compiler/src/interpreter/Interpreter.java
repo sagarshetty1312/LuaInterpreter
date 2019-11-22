@@ -2,9 +2,12 @@ package interpreter;
 
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.sun.org.apache.bcel.internal.generic.INSTANCEOF;
+import com.sun.org.apache.xalan.internal.xsltc.compiler.sym;
 import com.sun.org.apache.xpath.internal.functions.FuncRound;
 
 //import cop5556fa19.BuildSymbolTable;
@@ -23,6 +26,8 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	
 	LuaTable _G; //global environment
+	LuaTable symTable;
+	Map<String, List<Stat>> labelMap;
 
 	/* Instantiates and initializes global environment
 	 * 
@@ -42,6 +47,7 @@ public class Interpreter extends ASTVisitorAdapter{
 		
 	public Interpreter() {
 		init_G();
+		symTable = new LuaTable();
 	}
 	
 
@@ -57,7 +63,7 @@ public class Interpreter extends ASTVisitorAdapter{
 			root = chunk;
 		//Perform static analysis to prepare for goto.  Uncomment after u
 		StaticAnalysis hg = new StaticAnalysis();
-		chunk.visit(hg,null);	
+		labelMap = (Map<String, List<Stat>>) chunk.visit(hg,null);	
 		//Interpret the program and return values returned from chunk.visit
 		List<LuaValue> vals = (List<LuaValue>) chunk.visit(this,_G);
 		return vals;
@@ -67,7 +73,7 @@ public class Interpreter extends ASTVisitorAdapter{
 	public Object visitChunk(Chunk chunk, Object arg) throws Exception {
 		Block block = chunk.block;
 		List<LuaValue> retList = (List<LuaValue>) block.visit(this, arg);
-		if((retList.size() != 0)) {
+		if((retList != null) || (retList.size() != 0)) {
 			if(retList.get(0) instanceof LuaBreak) {
 				retList.remove(0);
 			} 
@@ -78,56 +84,7 @@ public class Interpreter extends ASTVisitorAdapter{
 	@Override
 	public Object visitBlock(Block block, Object arg) throws Exception {
 		List<LuaValue> retList = new ArrayList<LuaValue>();
-		for(Stat stat : block.stats) {
-			if(stat instanceof RetStat) {
-				RetStat retStat = (RetStat)stat;
-				return retStat.visit(this, arg);
-				
-			} else if(stat instanceof StatAssign) {
-				StatAssign statAssign = (StatAssign)stat;
-				statAssign.visit(this, arg);
-				
-			} else if (stat instanceof StatLabel) {
-				//to be implemented
-			} else if (stat instanceof StatBreak) {
-				retList.add(new LuaBreak());
-				return retList;
-				
-			} else if(stat instanceof StatGoto) {
-				//to be implemented
-			} else if(stat instanceof StatDo) {
-				StatDo statDo = (StatDo)stat;
-				retList = (List<LuaValue>) statDo.visit(this, arg);
-				
-			} else if(stat instanceof StatWhile) {
-				StatWhile statWhile = (StatWhile)stat;
-				retList = (List<LuaValue>) statWhile.visit(this, arg);
-				
-			} else if(stat instanceof StatRepeat) {
-				StatRepeat statRepeat = (StatRepeat)stat;
-				retList = (List<LuaValue>) statRepeat.visit(this, arg);
-				
-			} else if(stat instanceof StatIf) {
-				StatIf statIf = (StatIf)stat;
-				retList = (List<LuaValue>) statIf.visit(this, arg);
-				
-			} else if(stat instanceof StatFor) {
-				//to be implemented
-			} else if(stat instanceof StatForEach) {
-				//to be implemented
-			} else if(stat instanceof StatFunction) {
-				//to be implemented
-			} else if(stat instanceof StatLocalFunc) {
-				//to be implemented
-			} else if(stat instanceof StatLocalAssign) {
-				//to be implemented
-			}
-			
-
-			if(retList.size() != 0) {
-				return retList;
-			}
-		}
+		retList = (List<LuaValue>) visitStatList(block.stats, retList, arg);
 		return retList;
 	}
 
@@ -140,7 +97,12 @@ public class Interpreter extends ASTVisitorAdapter{
 				list.add((LuaValue) expName.visit(this, arg));
 				
 			} else {
-				list.add(visitExp(exp, arg));
+				LuaValue lv = visitExp(exp, arg);
+				if(lv instanceof LuaList) {
+					list.addAll(((LuaList)lv).list);
+				}else {
+					list.add(lv);	
+				}
 			}
 		}
 		
@@ -177,17 +139,25 @@ public class Interpreter extends ASTVisitorAdapter{
 		} else if (exp instanceof ExpName) {
 			ExpName expName = (ExpName)exp;
 			return (LuaValue)expName.visit(this, arg);
+			
 		} else if (exp instanceof ExpTableLookup) {
-			//to be implemented
+			ExpTableLookup etl = (ExpTableLookup)exp;
+			return (LuaValue)etl.visit(this, arg);
+			
 		} else if (exp instanceof ExpFunctionCall) {
+			ExpFunctionCall efc = (ExpFunctionCall)exp;
+			return (LuaValue)efc.visit(this, arg);
 			//to be implemented
 		} else if (exp instanceof ExpTable) {
 			ExpTable expTable = (ExpTable) exp;
-			return (LuaValue) expTable.visit(this, arg);
+			return (LuaTable) expTable.visit(this, arg);
 			
 		} else if (exp instanceof ExpBinary) {
 			ExpBinary expBin = (ExpBinary)exp;
 			return (LuaValue) expBin.visit(this, arg);
+		} else if (exp instanceof ExpUnary) {
+			ExpUnary expUn = (ExpUnary)exp;
+			return (LuaValue) expUn.visit(this, arg);
 		}
 		return new LuaNil();
 	}
@@ -203,24 +173,28 @@ public class Interpreter extends ASTVisitorAdapter{
 	@Override
 	public Object visitStatAssign(StatAssign statAssign, Object arg) throws Exception {
 		if(statAssign.varList.size() == statAssign.expList.size()) {
-			LuaString []varList = new LuaString[statAssign.varList.size()];
+			List<LuaValue> expList = visitExpList(statAssign.expList, arg);
 			int count = 0;
 			for(Exp var : statAssign.varList) {
 				if(var instanceof ExpName) {
 					ExpName expName = (ExpName)var;
-					varList[count++] = new LuaString(expName.name);
+
+					symTable.put(new LuaString(expName.name), expList.get(count++));
+					
 				} else if(var instanceof ExpTableLookup) {
 					ExpTableLookup expTableLookup = (ExpTableLookup)var;
-					varList[count++] = (LuaString) expTableLookup.visit(this, arg);
+					LuaTable table = (LuaTable)visitExp(expTableLookup.table, arg);
+					if(table == null)
+						throw new StaticSemanticException(expTableLookup.firstToken, "Invalid table for lookup.");
+					
+					if(table instanceof LuaTable) {
+						LuaTable ltable = (LuaTable)table;
+						ltable.put(visitExp(expTableLookup.key, arg), expList.get(count++));
+						symTable.put((LuaValue)visitExp(expTableLookup.table, arg), ltable);
+					}
 				} else {
 					throw new StaticSemanticException(var.firstToken, "Expected variable.");
 				}
-			}
-			
-			count = 0;
-			List<LuaValue> expList = visitExpList(statAssign.expList, arg);
-			for(LuaString ls : varList) {
-				_G.put(ls, expList.get(count++));
 			}
 			
 		}else {
@@ -244,18 +218,24 @@ public class Interpreter extends ASTVisitorAdapter{
 	@Override
 	public LuaValue visitExpName(ExpName expName, Object arg) throws StaticSemanticException {
 		LuaString luaString = new LuaString(expName.name);
-		LuaValue luaValue = _G.get(luaString);
-		if(luaValue.equals(new LuaNil())) {
-			throw new StaticSemanticException(expName.firstToken, "Variable not initalized");
-		}
+		LuaValue luaValue = symTable.get(luaString);
+		//if(luaValue == LuaNil.nil) {
+		//	throw new StaticSemanticException(expName.firstToken, "Variable not initalized");
+		//}
 		return luaValue;
 	}
 
 	@Override
 	public LuaValue visitExpTableLookup(ExpTableLookup expTableLookup, Object arg) throws Exception {
-		
-		// to be implemented
-		return null;
+		try{
+			LuaTable table = (LuaTable) symTable.get((LuaValue)visitExp(expTableLookup.table, arg));
+			if(table == null || table == LuaNil.nil)
+				throw new StaticSemanticException(expTableLookup.firstToken, "Invalid table for lookup.");
+
+			return table.get(visitExp(expTableLookup.key, arg));
+		} catch (ClassCastException e) {
+			throw new StaticSemanticException(expTableLookup.firstToken, "Invalid lookup");
+		}
 	}
 	
 	@Override
@@ -310,7 +290,43 @@ public class Interpreter extends ASTVisitorAdapter{
 	}
 
 	@Override
-	public LuaValue visitExpTable(ExpTable expTableConstr, Object arg) throws Exception {
+	public Object visitUnExp(ExpUnary unExp, Object arg) throws Exception {
+		LuaValue e = visitExp(unExp.e, arg);
+		Kind opKind = unExp.op;
+		if(e instanceof LuaInt) {
+			LuaInt luaInt = (LuaInt)e;
+			if(opKind == Kind.OP_MINUS)
+				return new LuaInt(luaInt.v*(-1));
+			else
+				throw new StaticSemanticException(unExp.firstToken, "Invalid operand");
+			
+		} else if(e instanceof LuaBoolean) {
+			LuaBoolean luaBoolean = (LuaBoolean)e;
+			if(opKind == Kind.KW_not)
+				return new LuaBoolean(!luaBoolean.value);
+			else if(opKind == Kind.BIT_XOR)
+				return new LuaBoolean(!luaBoolean.value);
+			else
+				throw new StaticSemanticException(unExp.firstToken, "Invalid operand");
+			
+		} else if(opKind == Kind.OP_HASH) {
+			if(e instanceof LuaString) {
+				LuaString luaS = (LuaString)e;
+				return new LuaInt(luaS.value.length());
+			
+			} else if(e instanceof LuaTable) {
+				LuaTable luaS = (LuaTable)e;
+				return new LuaInt(luaS.arraySize);
+			
+			}
+			else
+				throw new StaticSemanticException(unExp.firstToken, "Invalid operand");
+		}
+		return null;
+	}
+
+	@Override
+	public LuaTable visitExpTable(ExpTable expTableConstr, Object arg) throws Exception {
 		LuaTable luaTable = new LuaTable();
 		for(Field f : expTableConstr.fields) {
 			if(f instanceof FieldNameKey) {
@@ -416,6 +432,98 @@ public class Interpreter extends ASTVisitorAdapter{
 		} while((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0))));
 		return list;
 	}
+
+	@Override
+	public Object visitExpFunctionCall(ExpFunctionCall expFunctionCall, Object arg) throws Exception {
+		List<LuaValue> list = new ArrayList<LuaValue>();
+		for(Exp e : expFunctionCall.args) {
+			list.add((LuaValue) e.visit(this, arg));
+		}
+		ExpName expName = (ExpName) expFunctionCall.f;
+		if(expName.name.equals("print")) {
+			print p = new print();
+			list = p.call(list);
+		} else if(expName.name.equals("println")) {
+			println p = new println();
+			list = p.call(list);
+		} else if(expName.name.equals("toNumber")) {
+			toNumber p = new toNumber();
+			list = p.call(list);
+		} else {
+			throw new StaticSemanticException(expFunctionCall.firstToken, "Function not defined");
+		}
+		return new LuaList(list);
+	}
+
+	@Override
+	public Object visitStatGoto(StatGoto statGoto, Object arg) throws Exception {
+		List<Stat> list = labelMap.get(statGoto.name.name);
+		if(list == null)
+			throw new StaticSemanticException(statGoto.firstToken, "Label not found");
+		List<LuaValue> retList = new ArrayList<LuaValue>();
+		retList = (List<LuaValue>) visitStatList(list, retList, arg);
+		
+		return retList;
+	}
+
+	public Object visitStatList(List<Stat> list, List<LuaValue> retList, Object arg) throws Exception {
+		for(Stat stat : list) {
+			if(stat instanceof RetStat) {
+				RetStat retStat = (RetStat)stat;
+				return retStat.visit(this, arg);
+				
+			} else if(stat instanceof StatAssign) {
+				StatAssign statAssign = (StatAssign)stat;
+				statAssign.visit(this, arg);
+				
+			} else if (stat instanceof StatLabel) {
+				//do nothing
+			} else if (stat instanceof StatBreak) {
+				retList.add(new LuaBreak());
+				return retList;
+				
+			} else if(stat instanceof StatGoto) {
+				StatGoto sg = (StatGoto)stat;
+				retList = (List<LuaValue>) sg.visit(this, arg);
+				break;
+				
+			} else if(stat instanceof StatDo) {
+				StatDo statDo = (StatDo)stat;
+				retList = (List<LuaValue>) statDo.visit(this, arg);
+				
+			} else if(stat instanceof StatWhile) {
+				StatWhile statWhile = (StatWhile)stat;
+				retList = (List<LuaValue>) statWhile.visit(this, arg);
+				
+			} else if(stat instanceof StatRepeat) {
+				StatRepeat statRepeat = (StatRepeat)stat;
+				retList = (List<LuaValue>) statRepeat.visit(this, arg);
+				
+			} else if(stat instanceof StatIf) {
+				StatIf statIf = (StatIf)stat;
+				retList = (List<LuaValue>) statIf.visit(this, arg);
+				
+			} else if(stat instanceof StatFor) {
+				//to be implemented
+			} else if(stat instanceof StatForEach) {
+				//to be implemented
+			} else if(stat instanceof StatFunction) {
+				//to be implemented
+			} else if(stat instanceof StatLocalFunc) {
+				//to be implemented
+			} else if(stat instanceof StatLocalAssign) {
+				//to be implemented
+			}
+			
+
+			if(retList.size() != 0) {
+				return retList;
+			}
+		}
+		return retList;
+	}
+
+
 
 	public LuaValue executeOperations(LuaString e0, LuaString e1, Kind opKind) {
 		switch (opKind) {
@@ -619,12 +727,6 @@ public class Interpreter extends ASTVisitorAdapter{
 	}
 
 	@Override
-	public Object visitUnExp(ExpUnary unExp, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public Object visitExpList(ExpList expList, Object arg) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
@@ -651,12 +753,6 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	@Override
 	public Object visitStatBreak(StatBreak statBreak, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object visitStatGoto(StatGoto statGoto, Object arg) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -716,12 +812,6 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	@Override
 	public Object visitFuncBody(FuncBody funcBody, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object visitExpFunctionCall(ExpFunctionCall expFunctionCall, Object arg) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}

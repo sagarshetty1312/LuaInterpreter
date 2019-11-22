@@ -3,6 +3,7 @@ package cop5556fa19.AST;
 import java.util.List;
 
 import cop5556fa19.Token;
+import interpreter.LuaTable;
 
 public class ExpTable extends Exp {
 
@@ -44,8 +45,8 @@ public class ExpTable extends Exp {
 	}
 
 	@Override
-	public Object visit(ASTVisitor v, Object arg) throws Exception {
-		return v.visitExpTable(this, arg);
+	public LuaTable visit(ASTVisitor v, Object arg) throws Exception {
+		return (LuaTable) v.visitExpTable(this, arg);
 	}
 
 }

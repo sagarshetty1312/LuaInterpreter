@@ -47,15 +47,6 @@ import cop5556fa19.AST.StatWhile;
 public abstract class ASTVisitorAdapter implements ASTVisitor {
 	
 	@SuppressWarnings("serial")
-	public static class StaticSemanticException extends Exception{
-		
-			public StaticSemanticException(Token first, String msg) {
-				super(first.line + ":" + first.pos + " " + msg);
-			}
-		}
-	
-	
-	@SuppressWarnings("serial")
 	public
 	static class TypeException extends Exception{
 
