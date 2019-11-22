@@ -262,7 +262,7 @@ public abstract class ASTVisitorAdapter implements ASTVisitor {
 	}
 
 	@Override
-	public Object visitExpName(ExpName expName, Object arg) {
+	public Object visitExpName(ExpName expName, Object arg) throws StaticSemanticException {
 		throw new UnsupportedOperationException();
 	}
 

@@ -85,6 +85,9 @@ public class Parser {
 
 	public Chunk parse() throws Exception {
 		Token first = t;
+		if(isKind(EOF)) {
+			return null;
+		}
 		Block b = block();
 		if(!isKind(EOF)) {
 			throw new SyntaxException(first, "Expected end of file");
@@ -722,9 +725,9 @@ public class Parser {
 			e0 =  new ExpTable(first, fieldList);
 		}else {
 			fieldList = fieldList();
-			Token c2 = match(RCURLY);
 			e0 =  new ExpTable(first, fieldList);
 		}
+		match(RCURLY);
 		return e0;
 	}
 
@@ -798,7 +801,9 @@ public class Parser {
 		}else if(isKind(NAME)){
 			/*Token t = match(NAME);
 			e0 = new ExpName(t);*/
-			Exp name = new ExpName(match(NAME));
+			Name name = new Name(first, match(NAME).text);
+			Exp expName = new ExpName(name.name);
+			
 			if(isKind(ASSIGN)) {
 				Token eq = match(ASSIGN);
 				Exp value = null;
@@ -807,9 +812,9 @@ public class Parser {
 				}else {
 					error(t.kind);
 				}
-				return new FieldExpKey(first, name, value);
+				return new FieldNameKey(first, name, value);
 			} else {
-				return new FieldImplicitKey(first, name);
+				return new FieldImplicitKey(first, expName);
 			}
 		}else if(checkIfExpFirst(this.t)) {
 				return new FieldImplicitKey(first, exp());

@@ -51,7 +51,10 @@ public class Interpreter extends ASTVisitorAdapter{
 		Scanner scanner = new Scanner(r); 
 		Parser parser = new Parser(scanner);
 		Chunk chunk = parser.parse();
-		root = chunk;
+		if(chunk == null)
+			return null;
+		else
+			root = chunk;
 		//Perform static analysis to prepare for goto.  Uncomment after u
 		StaticAnalysis hg = new StaticAnalysis();
 		chunk.visit(hg,null);	
@@ -63,11 +66,18 @@ public class Interpreter extends ASTVisitorAdapter{
 	@Override
 	public Object visitChunk(Chunk chunk, Object arg) throws Exception {
 		Block block = chunk.block;
-		return block.visit(this, arg);
+		List<LuaValue> retList = (List<LuaValue>) block.visit(this, arg);
+		if((retList.size() != 0)) {
+			if(retList.get(0) instanceof LuaBreak) {
+				retList.remove(0);
+			} 
+		}
+		return retList;
 	}
 
 	@Override
 	public Object visitBlock(Block block, Object arg) throws Exception {
+		List<LuaValue> retList = new ArrayList<LuaValue>();
 		for(Stat stat : block.stats) {
 			if(stat instanceof RetStat) {
 				RetStat retStat = (RetStat)stat;
@@ -80,23 +90,24 @@ public class Interpreter extends ASTVisitorAdapter{
 			} else if (stat instanceof StatLabel) {
 				//to be implemented
 			} else if (stat instanceof StatBreak) {
-				//to be implemented
+				retList.add(new LuaBreak());
+				return retList;
+				
 			} else if(stat instanceof StatGoto) {
 				//to be implemented
 			} else if(stat instanceof StatDo) {
 				StatDo statDo = (StatDo)stat;
-				List<LuaValue> retList = (List<LuaValue>) statDo.visit(this, arg);
-				if(retList.size() != 0) {
-					return retList;
-				}
+				retList = (List<LuaValue>) statDo.visit(this, arg);
 				
 			} else if(stat instanceof StatWhile) {
-				//to be implemented
+				StatWhile statWhile = (StatWhile)stat;
+				retList = (List<LuaValue>) statWhile.visit(this, arg);
+				
 			} else if(stat instanceof StatRepeat) {
 				//to be implemented
 			} else if(stat instanceof StatIf) {
 				StatIf statIf = (StatIf)stat;
-				statIf.visit(this, arg);
+				retList = (List<LuaValue>) statIf.visit(this, arg);
 				//to be implemented
 			} else if(stat instanceof StatFor) {
 				//to be implemented
@@ -109,9 +120,13 @@ public class Interpreter extends ASTVisitorAdapter{
 			} else if(stat instanceof StatLocalAssign) {
 				//to be implemented
 			}
-			System.out.println(stat.toString());
+			
+
+			if(retList.size() != 0) {
+				return retList;
+			}
 		}
-		return null;
+		return retList;
 	}
 
 	@Override
@@ -120,7 +135,7 @@ public class Interpreter extends ASTVisitorAdapter{
 		for(Exp exp : retStat.el) {
 			if (exp instanceof ExpName) {
 				ExpName expName = (ExpName)exp;
-				list.add(_G.get((LuaValue) expName.visit(this, arg)));
+				list.add((LuaValue) expName.visit(this, arg));
 				
 			} else {
 				list.add(visitExp(exp, arg));
@@ -165,7 +180,9 @@ public class Interpreter extends ASTVisitorAdapter{
 		} else if (exp instanceof ExpFunctionCall) {
 			//to be implemented
 		} else if (exp instanceof ExpTable) {
-			//to be implemented
+			ExpTable expTable = (ExpTable) exp;
+			return (LuaValue) expTable.visit(this, arg);
+			
 		} else if (exp instanceof ExpBinary) {
 			ExpBinary expBin = (ExpBinary)exp;
 			return (LuaValue) expBin.visit(this, arg);
@@ -223,13 +240,18 @@ public class Interpreter extends ASTVisitorAdapter{
 	}
 
 	@Override
-	public Object visitExpName(ExpName expName, Object arg) {
+	public LuaValue visitExpName(ExpName expName, Object arg) throws StaticSemanticException {
 		LuaString luaString = new LuaString(expName.name);
-		return _G.get(luaString);
+		LuaValue luaValue = _G.get(luaString);
+		if(luaValue.equals(new LuaNil())) {
+			throw new StaticSemanticException(expName.firstToken, "Variable not initalized");
+		}
+		return luaValue;
 	}
 
 	@Override
-	public Object visitExpTableLookup(ExpTableLookup expTableLookup, Object arg) throws Exception {
+	public LuaValue visitExpTableLookup(ExpTableLookup expTableLookup, Object arg) throws Exception {
+		
 		// to be implemented
 		return null;
 	}
@@ -283,6 +305,95 @@ public class Interpreter extends ASTVisitorAdapter{
 			throw new StaticSemanticException(expBin.firstToken, "Incompatible operands");
 		}
 		return new LuaNil();
+	}
+
+	@Override
+	public LuaValue visitExpTable(ExpTable expTableConstr, Object arg) throws Exception {
+		LuaTable luaTable = new LuaTable();
+		for(Field f : expTableConstr.fields) {
+			if(f instanceof FieldNameKey) {
+				FieldNameKey fnk = (FieldNameKey)f;
+				luaTable.put(fnk.name.name, visitExp(fnk.exp, arg));
+				
+			} else if(f instanceof FieldExpKey) {
+				FieldExpKey fek = (FieldExpKey)f;
+				luaTable.put(visitExp(fek.key, arg), visitExp(fek.value, arg));
+				
+			} else if(f instanceof FieldImplicitKey) {
+				FieldImplicitKey fik = (FieldImplicitKey)f;
+				luaTable.putImplicit(visitExp(fik.exp, arg));
+				
+			} else {
+				throw new StaticSemanticException(expTableConstr.firstToken, "Invalid table constructor syntax");
+			}
+		}
+		return luaTable;
+	}
+
+
+
+	@Override
+	public Object visitStatDo(StatDo statDo, Object arg) throws Exception {
+		Block b = statDo.b;
+		List<LuaValue> retList = (List<LuaValue>) b.visit(this, arg);
+		if((retList.size() != 0)) {
+			if(retList.get(0) instanceof LuaBreak) {
+				retList.remove(0);
+			} 
+		}
+		return retList;
+	}
+
+	@Override
+	public Object visitStatIf(StatIf statIf, Object arg) throws Exception {
+		List<Exp> eList = statIf.es;
+		List<Block> bList = statIf.bs;
+		List<LuaValue> retList = new ArrayList<LuaValue>();
+		int	count = 0;
+		for(Exp exp : eList) {
+			if((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0)))){
+				Block block = bList.get(count);
+				retList = (List<LuaValue>) block.visit(this, arg);
+				if((retList.size() != 0)) {
+					if(retList.get(0) instanceof LuaBreak) {
+						//retList.remove(0);
+					} 
+				}
+				return retList;
+			}
+			count++;
+		}
+		if(bList.size() > eList.size()) {
+			Block block = bList.get(count);
+			retList = (List<LuaValue>) block.visit(this, arg);
+			if((retList.size() != 0)) {
+				if(retList.get(0) instanceof LuaBreak) {
+					//retList.remove(0);
+				} 
+			}
+			return retList;
+		}else{
+			return retList;
+		}
+	}
+
+	@Override
+	public Object visitStatWhile(StatWhile statWhile, Object arg) throws Exception {
+		Exp exp = statWhile.e;
+		List<LuaValue> list = new ArrayList<LuaValue>();
+		
+		while((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0)))) {
+			Block block = statWhile.b;
+			list = (List<LuaValue>) block.visit(this, arg);
+
+			if((list.size() != 0)) {
+				if(list.get(0) instanceof LuaBreak) {
+					list.remove(0);
+				}
+				return list; 
+			}
+		}
+		return list;
 	}
 
 	public LuaValue executeOperations(LuaString e0, LuaString e1, Kind opKind) {
@@ -486,42 +597,8 @@ public class Interpreter extends ASTVisitorAdapter{
 		return new LuaNil();
 	}
 
-
-
-	@Override
-	public Object visitStatDo(StatDo statDo, Object arg) throws Exception {
-		Block b = statDo.b;
-		return b.visit(this, arg);
-	}
-
-	@Override
-	public Object visitStatIf(StatIf statIf, Object arg) throws Exception {
-		List<Exp> eList = statIf.es;
-		List<Block> bList = statIf.bs;
-		int	count = 0;
-		for(Exp exp : eList) {
-			if((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0)))){
-				Block block = bList.get(count);
-				return block.visit(this, arg);
-			}
-			count++;
-		}
-		if(bList.size() > eList.size()) {
-			Block block = bList.get(count);
-			return block.visit(this, arg);
-		}else{
-			return new LuaNil();
-		}
-	}
-
 	@Override
 	public Object visitUnExp(ExpUnary unExp, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object visitExpTable(ExpTable expTableConstr, Object arg) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -559,12 +636,6 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	@Override
 	public Object visitStatGoto(StatGoto statGoto, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object visitStatWhile(StatWhile statWhile, Object arg) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
