@@ -104,11 +104,13 @@ public class Interpreter extends ASTVisitorAdapter{
 				retList = (List<LuaValue>) statWhile.visit(this, arg);
 				
 			} else if(stat instanceof StatRepeat) {
-				//to be implemented
+				StatRepeat statRepeat = (StatRepeat)stat;
+				retList = (List<LuaValue>) statRepeat.visit(this, arg);
+				
 			} else if(stat instanceof StatIf) {
 				StatIf statIf = (StatIf)stat;
 				retList = (List<LuaValue>) statIf.visit(this, arg);
-				//to be implemented
+				
 			} else if(stat instanceof StatFor) {
 				//to be implemented
 			} else if(stat instanceof StatForEach) {
@@ -378,7 +380,7 @@ public class Interpreter extends ASTVisitorAdapter{
 	}
 
 	@Override
-	public Object visitStatWhile(StatWhile statWhile, Object arg) throws Exception {
+	public List<LuaValue> visitStatWhile(StatWhile statWhile, Object arg) throws Exception {
 		Exp exp = statWhile.e;
 		List<LuaValue> list = new ArrayList<LuaValue>();
 		
@@ -393,6 +395,25 @@ public class Interpreter extends ASTVisitorAdapter{
 				return list; 
 			}
 		}
+		return list;
+	}
+
+	@Override
+	public List<LuaValue> visitStatRepeat(StatRepeat statRepeat, Object arg) throws Exception {
+		Exp exp = statRepeat.e;
+		List<LuaValue> list = new ArrayList<LuaValue>();
+		
+		do {
+			Block block = statRepeat.b;
+			list = (List<LuaValue>) block.visit(this, arg);
+
+			if((list.size() != 0)) {
+				if(list.get(0) instanceof LuaBreak) {
+					list.remove(0);
+				}
+				return list; 
+			}
+		} while((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0))));
 		return list;
 	}
 
@@ -636,12 +657,6 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	@Override
 	public Object visitStatGoto(StatGoto statGoto, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object visitStatRepeat(StatRepeat statRepeat, Object arg) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
