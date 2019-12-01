@@ -84,14 +84,15 @@ public class Parser {
 
 
 	public Chunk parse() throws Exception {
+		Chunk chunk = chunk();
+		if (!isKind(EOF)) throw new SyntaxException(t, "Parse ended before end of input");
+		//if(chunk.firstToken.kind==EOF) return null;
+		return chunk;
+	}
+	
+	public Chunk chunk() throws Exception {
 		Token first = t;
-		if(isKind(EOF)) {
-			return null;
-		}
 		Block b = block();
-		if(!isKind(EOF)) {
-			throw new SyntaxException(first, "Expected end of file");
-		}
 		return new Chunk(first, b);
 	}
 	
@@ -215,11 +216,13 @@ public class Parser {
 			consume();
 			Token name = match(NAME);
 			if(isKind(ASSIGN)) {//StatFor
-				Exp einc = null;
+				consume();
 				Exp ebeg = exp();
 				match(COMMA);
 				Exp eend = exp();
+				Exp einc = null;
 				if(isKind(COMMA)) {
+					consume();
 					einc = exp();
 				}
 				match(KW_do);
@@ -448,6 +451,7 @@ public class Parser {
 		List list = new ArrayList<Exp>();
 		list.add(exp());
 		while(isKind(COMMA)) {
+			consume();
 			list.add(exp());
 		}
 		return list;

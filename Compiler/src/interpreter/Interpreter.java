@@ -73,6 +73,7 @@ public class Interpreter extends ASTVisitorAdapter{
 	public Object visitChunk(Chunk chunk, Object arg) throws Exception {
 		Block block = chunk.block;
 		List<LuaValue> retList = (List<LuaValue>) block.visit(this, arg);
+		if(retList.isEmpty()) return null;
 		if((retList != null) || (retList.size() != 0)) {
 			if(retList.get(0) instanceof LuaBreak) {
 				retList.remove(0);
@@ -99,6 +100,8 @@ public class Interpreter extends ASTVisitorAdapter{
 				statAssign.visit(this, arg);
 				
 			} else if (stat instanceof StatLabel) {
+				StatLabel sl = (StatLabel)stat;
+				sl.visit(this, arg);
 				//do nothing
 			} else if (stat instanceof StatBreak) {
 				retList.add(new LuaBreak());
@@ -536,6 +539,13 @@ public class Interpreter extends ASTVisitorAdapter{
 		return retList;
 	}
 
+	@Override
+	public Object visitLabel(StatLabel statLabel, Object ar) {
+		Name name = statLabel.label;
+		return name;
+		
+	}
+
 
 
 	public LuaValue executeOperations(LuaString e0, LuaString e1, Kind opKind) {
@@ -825,12 +835,6 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	@Override
 	public Object visitFuncBody(FuncBody funcBody, Object arg) throws Exception {
-		throw new UnsupportedOperationException();
-		
-	}
-
-	@Override
-	public Object visitLabel(StatLabel statLabel, Object ar) {
 		throw new UnsupportedOperationException();
 		
 	}

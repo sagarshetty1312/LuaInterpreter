@@ -233,5 +233,30 @@ class ParserTest_Sample {
 		Chunk expectedChunk = new Chunk(expectedBlock.firstToken, expectedBlock);
 		assertEquals(expectedChunk,c);
 	}
+	
+	@Test
+	void testFailed0() throws Exception {
+		String input = "repeat x=x*y until a==nil;";
+		ASTNode c = parseAndShow(input);
+		String expected = "Chunk [block=Block [stats=[StatRepeat [b=Block [stats=[StatAssign [varList=[ExpName [name=x, lexicalDiff=-3]], expList=[ExpBinary [e0=ExpName [name=x, lexicalDiff=-3], op=OP_TIMES, e1=ExpName [name=y, lexicalDiff=-3]]]]]], e=ExpBinary [e0=ExpName [name=a, lexicalDiff=-3], op=REL_EQEQ, e1=ExpNil [firstToken=Token [kind=KW_nil, text=nil, pos=26, line=1]]], firstToken=Token [kind=KW_repeat, text=repeat, pos=7, line=1]], null]]]";
+		assertEquals(expected,c.toString());
+	}
+	
+	@Test
+	void testFailed1() throws Exception {
+		String input = "for i = 0 , i < 10 , i + 1 do a = b end";
+		ASTNode c = parseAndShow(input);
+		String expected = "Chunk [block=Block [stats=[StatFor [name=ExpName [name=i, lexicalDiff=-3], ebeg=ExpInt [v=0], eend=ExpBinary [e0=ExpName [name=i, lexicalDiff=-3], op=REL_LT, e1=ExpInt [v=10]], einc=ExpBinary [e0=ExpName [name=i, lexicalDiff=-3], op=OP_PLUS, e1=ExpInt [v=1]], g=Block [stats=[StatAssign [varList=[ExpName [name=a, lexicalDiff=-3]], expList=[ExpName [name=b, lexicalDiff=-3]]]]], firstToken=Token [kind=KW_for, text=for, pos=4, line=1]]]]]";
+		System.out.println(c.toString());
+		assertEquals(expected,c.toString());
+	}
+	
+	@Test
+	void testFailed2() throws Exception {
+		String input = "goto mylabel;";
+		ASTNode c = parseAndShow(input);
+		String expected = "Chunk [block=Block [stats=[StatGoto [name=Name [name=mylabel, lexicalDiff=0, localSlot=0], label=null], null]]]";
+		assertEquals(expected,c.toString());
+	}
 }
 
