@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 
 import com.sun.org.apache.bcel.internal.generic.INSTANCEOF;
 import com.sun.org.apache.xalan.internal.xsltc.compiler.sym;
@@ -27,7 +28,10 @@ public class Interpreter extends ASTVisitorAdapter{
 	
 	LuaTable _G; //global environment
 	LuaTable symTable;
-	Map<String, List<Stat>> labelMap;
+	Map<String, List<Stat>> lMap;
+	Map<Stack<Integer>,Map<String, List<Stat>>> symbolTable;
+	Stack<Integer> curstack;
+	public int blockCounter;
 
 	/* Instantiates and initializes global environment
 	 * 
@@ -48,6 +52,13 @@ public class Interpreter extends ASTVisitorAdapter{
 	public Interpreter() {
 		init_G();
 		symTable = new LuaTable();
+		initializeSymbolTable();
+	}
+	
+	public void initializeSymbolTable() {
+		curstack = new Stack<Integer>();
+		symbolTable = new HashMap<Stack<Integer>, Map<String,List<Stat>>>();
+		blockCounter = 0;
 	}
 	
 
@@ -63,7 +74,8 @@ public class Interpreter extends ASTVisitorAdapter{
 			root = chunk;
 		//Perform static analysis to prepare for goto.  Uncomment after u
 		StaticAnalysis hg = new StaticAnalysis();
-		labelMap = (Map<String, List<Stat>>) chunk.visit(hg,null);	
+		//lMap = (Map<String, List<Stat>>) chunk.visit(hg,null);
+		symbolTable = (Map<Stack<Integer>, Map<String, List<Stat>>>) chunk.visit(hg,null);
 		//Interpret the program and return values returned from chunk.visit
 		List<LuaValue> vals = (List<LuaValue>) chunk.visit(this,_G);
 		return vals;
@@ -84,68 +96,143 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	@Override
 	public Object visitBlock(Block block, Object arg) throws Exception {
+		curstack.push(blockCounter ++);
 		List<LuaValue> retList = new ArrayList<LuaValue>();
 		retList = (List<LuaValue>) visitStatList(block.stats, retList, arg);
+		curstack.pop();
 		return retList;
 	}
 
 	public Object visitStatList(List<Stat> list, List<LuaValue> retList, Object arg) throws Exception {
+		boolean completedStatList = false;
+		
 		for(Stat stat : list) {
-			if(stat instanceof RetStat) {
-				RetStat retStat = (RetStat)stat;
-				return retStat.visit(this, arg);
-				
-			} else if(stat instanceof StatAssign) {
-				StatAssign statAssign = (StatAssign)stat;
-				statAssign.visit(this, arg);
-				
-			} else if (stat instanceof StatLabel) {
-				StatLabel sl = (StatLabel)stat;
-				sl.visit(this, arg);
-				//do nothing
-			} else if (stat instanceof StatBreak) {
-				retList.add(new LuaBreak());
-				return retList;
-				
-			} else if(stat instanceof StatGoto) {
-				StatGoto sg = (StatGoto)stat;
-				retList = (List<LuaValue>) sg.visit(this, arg);
-				break;
-				
-			} else if(stat instanceof StatDo) {
-				StatDo statDo = (StatDo)stat;
-				retList = (List<LuaValue>) statDo.visit(this, arg);
-				
-			} else if(stat instanceof StatWhile) {
-				StatWhile statWhile = (StatWhile)stat;
-				retList = (List<LuaValue>) statWhile.visit(this, statWhile);
-				
-			} else if(stat instanceof StatRepeat) {
-				StatRepeat statRepeat = (StatRepeat)stat;
-				retList = (List<LuaValue>) statRepeat.visit(this, statRepeat);
-				
-			} else if(stat instanceof StatIf) {
-				StatIf statIf = (StatIf)stat;
-				retList = (List<LuaValue>) statIf.visit(this, arg);
-				
-			} else if(stat instanceof StatFor) {
-				//to be implemented
-			} else if(stat instanceof StatForEach) {
-				//to be implemented
-			} else if(stat instanceof StatFunction) {
-				//to be implemented
-			} else if(stat instanceof StatLocalFunc) {
-				//to be implemented
-			} else if(stat instanceof StatLocalAssign) {
-				//to be implemented
-			}
-			
+			if(!completedStatList) {
+				if(stat instanceof RetStat) {
+					RetStat retStat = (RetStat)stat;
+					return retStat.visit(this, arg);
+					
+				} else if(stat instanceof StatAssign) {
+					StatAssign statAssign = (StatAssign)stat;
+					statAssign.visit(this, arg);
+					
+				} else if (stat instanceof StatLabel) {
+					StatLabel sl = (StatLabel)stat;
+					//do nothing
+				} else if (stat instanceof StatBreak) {
+					retList.add(new LuaBreak());
+					completedStatList = true;
+					//return retList;
+					
+				} else if(stat instanceof StatGoto) {
+					StatGoto sg = (StatGoto)stat;
+					retList = (List<LuaValue>) sg.visit(this, arg);
+					break;
+					
+				} else if(stat instanceof StatDo) {
+					StatDo statDo = (StatDo)stat;
+					retList = (List<LuaValue>) statDo.visit(this, arg);
+					
+				} else if(stat instanceof StatWhile) {
+					StatWhile statWhile = (StatWhile)stat;
+					retList = (List<LuaValue>) statWhile.visit(this, statWhile);
+					
+				} else if(stat instanceof StatRepeat) {
+					StatRepeat statRepeat = (StatRepeat)stat;
+					retList = (List<LuaValue>) statRepeat.visit(this, statRepeat);
+					
+				} else if(stat instanceof StatIf) {
+					StatIf statIf = (StatIf)stat;
+					retList = (List<LuaValue>) statIf.visit(this, arg);
+					
+				} else if(stat instanceof StatFor) {
+					//to be implemented
+				} else if(stat instanceof StatForEach) {
+					//to be implemented
+				} else if(stat instanceof StatFunction) {
+					//to be implemented
+				} else if(stat instanceof StatLocalFunc) {
+					//to be implemented
+				} else if(stat instanceof StatLocalAssign) {
+					//to be implemented
+				}
 
-			if(retList.size() != 0) {
-				return retList;
+				if(retList.size() != 0) {
+					completedStatList = true;
+					//return retList;
+				}
+			} else {
+				//visit only stats that contain blocks statically
+				if(stat instanceof StatDo) {
+					StatDo statDo = (StatDo)stat;
+					visitStatDoStatically(statDo, arg);
+					
+				} else if(stat instanceof StatWhile) {
+					StatWhile statWhile = (StatWhile)stat;
+					visitStatWhileStatically(statWhile, arg);
+					
+				} else if(stat instanceof StatRepeat) {
+					StatRepeat statRepeat = (StatRepeat)stat;
+					visitStatRepeatStatically(statRepeat, arg);
+					
+				} else if(stat instanceof StatIf) {
+					StatIf statIf = (StatIf)stat;
+					visitStatIfStatically(statIf, arg);
+					
+				}
 			}
 		}
 		return retList;
+	}
+
+	public void visitBlockStatically(Block block, Object arg) {
+		curstack.push(blockCounter ++);
+		List<LuaValue> retList = new ArrayList<LuaValue>();
+		for(Stat stat : block.stats) {
+			if(stat instanceof StatDo) {
+				StatDo statDo = (StatDo)stat;
+				visitStatDoStatically(statDo, arg);
+				
+			} else if(stat instanceof StatWhile) {
+				StatWhile statWhile = (StatWhile)stat;
+				visitStatWhileStatically(statWhile, arg);
+				
+			} else if(stat instanceof StatRepeat) {
+				StatRepeat statRepeat = (StatRepeat)stat;
+				visitStatRepeatStatically(statRepeat, arg);
+				
+			} else if(stat instanceof StatIf) {
+				StatIf statIf = (StatIf)stat;
+				visitStatIfStatically(statIf, arg);
+			}
+		}
+		curstack.pop();
+	}
+
+	public void visitStatIfStatically(StatIf statIf, Object arg) {
+		List<Block> bList = statIf.bs;
+		for(Block b : bList) {
+			visitBlockStatically(b, arg);
+		}
+		
+	}
+
+	public void visitStatRepeatStatically(StatRepeat statRepeat, Object arg) {
+		Block block = statRepeat.b;
+		visitBlockStatically(block, arg);
+		
+	}
+
+	public void visitStatWhileStatically(StatWhile statWhile, Object arg) {
+		Block block = statWhile.b;
+		visitBlockStatically(block, arg);
+		
+	}
+
+	public void visitStatDoStatically(StatDo statDo, Object arg) {
+		Block b = statDo.b;
+		visitBlockStatically(b, arg);
+		
 	}
 
 	@Override
@@ -439,50 +526,79 @@ public class Interpreter extends ASTVisitorAdapter{
 		List<Block> bList = statIf.bs;
 		List<LuaValue> retList = new ArrayList<LuaValue>();
 		int	count = 0;
+		boolean completedStatIf = false;
 		for(Exp exp : eList) {
-			if((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0)))){
-				Block block = bList.get(count);
-				retList = (List<LuaValue>) block.visit(this, arg);
-				if((retList.size() != 0)) {
-					if(retList.get(0) instanceof LuaBreak) {
-						//retList.remove(0);
-					} 
+			Block block = bList.get(count);
+			if(completedStatIf == false) {
+				if((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0)))){
+					completedStatIf = true;
+					retList = (List<LuaValue>) block.visit(this, arg);
+					if((retList.size() != 0)) {
+						if(retList.get(0) instanceof LuaBreak) {
+							if((arg instanceof StatWhile) || (arg instanceof StatRepeat)) {
+								return retList;
+							} else {
+								retList.remove(0);
+								return retList;
+							}
+						} 
+					}
+				} else {
+					visitBlockStatically(block, arg);
 				}
-				return retList;
+			} else {
+				visitBlockStatically(block, arg);
 			}
 			count++;
 		}
 		if(bList.size() > eList.size()) {
 			Block block = bList.get(count);
-			retList = (List<LuaValue>) block.visit(this, arg);
-			if((retList.size() != 0)) {
-				if(retList.get(0) instanceof LuaBreak) {
-					//retList.remove(0);
-				} 
+			if(completedStatIf== false) {
+				retList = (List<LuaValue>) block.visit(this, arg);
+				if((retList.size() != 0)) {
+					if(retList.get(0) instanceof LuaBreak) {
+						if((arg instanceof StatWhile) || (arg instanceof StatRepeat)) {
+							return retList;
+						} else {
+							retList.remove(0);
+							return retList;
+						}
+					} 
+				}
+			} else {
+				visitBlockStatically(block, arg);
 			}
-			return retList;
-		}else{
-			return retList;
 		}
+
+		return retList;
 	}
 
 	@Override
 	public List<LuaValue> visitStatWhile(StatWhile statWhile, Object arg) throws Exception {
 		Exp exp = statWhile.e;
+		Block block = statWhile.b;
 		List<LuaValue> list = new ArrayList<LuaValue>();
-		
-		while((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0)))) {
-			Block block = statWhile.b;
-			list = (List<LuaValue>) block.visit(this, arg);
+		if((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0)))) {
+			int depthOfBlock = 0;
+			while((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0)))) {
+				list = (List<LuaValue>) block.visit(this, arg);
 
-			if((list.size() != 0)) {
-				if(list.get(0) instanceof LuaBreak) {
-					list.remove(0);
-					break;
+				if((list.size() != 0)) {
+					if(list.get(0) instanceof LuaBreak) {
+						list.remove(0);
+						break;
+					}
+					return list; 
 				}
-				return list; 
+
+				depthOfBlock = blockCounter - depthOfBlock;
+				blockCounter = blockCounter - depthOfBlock;
 			}
+			blockCounter = blockCounter + depthOfBlock;
+		} else {
+			visitBlockStatically(block, arg);
 		}
+		
 		return list;
 	}
 
@@ -490,7 +606,7 @@ public class Interpreter extends ASTVisitorAdapter{
 	public List<LuaValue> visitStatRepeat(StatRepeat statRepeat, Object arg) throws Exception {
 		Exp exp = statRepeat.e;
 		List<LuaValue> list = new ArrayList<LuaValue>();
-		
+		int depthOfBlock = 0;
 		do {
 			Block block = statRepeat.b;
 			list = (List<LuaValue>) block.visit(this, arg);
@@ -502,7 +618,10 @@ public class Interpreter extends ASTVisitorAdapter{
 				}
 				return list; 
 			}
+			depthOfBlock = blockCounter - depthOfBlock;
+			blockCounter = blockCounter - depthOfBlock;
 		} while((exp.visit(this, arg).equals(new LuaBoolean(true))) || (exp.visit(this, arg).equals(new LuaInt(0))));
+		blockCounter = blockCounter + depthOfBlock;
 		return list;
 	}
 
@@ -530,9 +649,21 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	@Override
 	public Object visitStatGoto(StatGoto statGoto, Object arg) throws Exception {
-		List<Stat> list = labelMap.get(statGoto.name.name);
+		List<Stat> list;
+		/*list = lMap.get(statGoto.name.name);
 		if(list == null)
-			throw new StaticSemanticException(statGoto.firstToken, "Label not found");
+			throw new StaticSemanticException(statGoto.firstToken, "Visible label not found");*/
+		
+		Map<String, List<Stat>> tempMap;
+		if(symbolTable.get(curstack) == null) {
+			throw new StaticSemanticException(statGoto.firstToken, "Visible label not found");
+		}
+		tempMap = symbolTable.get(curstack);
+		if(tempMap.get(statGoto.name.name) == null) {
+			throw new StaticSemanticException(statGoto.firstToken, "Visible label not found");
+		}
+		list = tempMap.get(statGoto.name.name);
+		
 		List<LuaValue> retList = new ArrayList<LuaValue>();
 		retList = (List<LuaValue>) visitStatList(list, retList, arg);
 		

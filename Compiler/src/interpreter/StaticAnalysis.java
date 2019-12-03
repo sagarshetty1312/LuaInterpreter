@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 
 import cop5556fa19.AST.ASTNode;
 import cop5556fa19.AST.ASTVisitor;
@@ -56,19 +57,26 @@ import interpreter.built_ins.toNumber;
 
 public class StaticAnalysis implements ASTVisitor {
 
-	Map<String, List<Stat>> labelMap = new HashMap<String, List<Stat>>();
+	Map<String, List<Stat>> lMap = new HashMap<String, List<Stat>>();
+	Map<Stack<Integer>,Map<String, List<Stat>>> symbolTable = new HashMap<Stack<Integer>, Map<String,List<Stat>>>();
+	Stack<Integer> curstack = new Stack<Integer>();
+	int blockCounter = 0;
 
 	@Override
 	public Object visitChunk(Chunk chunk, Object arg) throws Exception {
 		Block block = chunk.block;
 		block.visit(this, arg);
-		return labelMap;
+		blockCounter = 0;
+		curstack = new Stack<Integer>();
+		block.visit(this, arg);
+		//return lMap;
+		return symbolTable;
 	}
 	
 	@Override
 	public Object visitBlock(Block block, Object arg) throws Exception {
-
-		List<LuaValue> retList = new ArrayList<LuaValue>();
+		curstack.push(blockCounter ++);
+		saveParentLabels();
 		for(Stat stat : block.stats) {
 			if(stat instanceof RetStat) {
 				//RetStat retStat = (RetStat)stat;
@@ -115,14 +123,22 @@ public class StaticAnalysis implements ASTVisitor {
 			} else if(stat instanceof StatLocalAssign) {
 				//to be implemented
 			}
-			
+		}
+		curstack.pop();
+		return null;
+	}
 
-			if(retList.size() != 0) {
-				return retList;
+	public void saveParentLabels() {
+		Stack<Integer> tempStack = (Stack<Integer>) curstack.clone();
+		tempStack.pop();
+		Map<String, List<Stat>> tempMap = new HashMap<String, List<Stat>>();
+		if(!tempStack.isEmpty()) {
+			if(symbolTable.get(tempStack)!=null) {
+				tempMap.putAll(symbolTable.get(tempStack));
+				Stack<Integer> insertStack = (Stack<Integer>) curstack.clone();
+				symbolTable.put(insertStack, tempMap);
 			}
 		}
-	
-		return null;
 	}
 
 	public void saveLabel(StatLabel statLabel, List<Stat> stats) {
@@ -136,8 +152,18 @@ public class StaticAnalysis implements ASTVisitor {
 				countStart = true;
 			}
 		}
-		if(labelMap.get(statLabel.label.name) == null)
-			labelMap.put(statLabel.label.name, listNew);
+		//if(lMap.get(statLabel.label.name) == null)
+			//lMap.put(statLabel.label.name, listNew);
+
+		Stack<Integer> tempStack = (Stack<Integer>) curstack.clone();
+		Map<String, List<Stat>> tempMap = new HashMap<String, List<Stat>>();
+		if(symbolTable.get(tempStack) == null) {
+			tempMap = new HashMap<String, List<Stat>>();
+		} else {
+			tempMap.putAll(symbolTable.get(tempStack));
+		}
+		tempMap.put(statLabel.label.name, listNew);
+		symbolTable.put(tempStack, tempMap);
 		
 	}
 	
