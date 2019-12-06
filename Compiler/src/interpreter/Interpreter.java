@@ -7,15 +7,52 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-import com.sun.org.apache.bcel.internal.generic.INSTANCEOF;
-import com.sun.org.apache.xalan.internal.xsltc.compiler.sym;
-import com.sun.org.apache.xpath.internal.functions.FuncRound;
-
 //import cop5556fa19.BuildSymbolTable;
 import cop5556fa19.Parser;
 import cop5556fa19.Scanner;
 import cop5556fa19.Token.Kind;
-import cop5556fa19.AST.*;
+import cop5556fa19.AST.ASTNode;
+import cop5556fa19.AST.Block;
+import cop5556fa19.AST.Chunk;
+import cop5556fa19.AST.Exp;
+import cop5556fa19.AST.ExpBinary;
+import cop5556fa19.AST.ExpFalse;
+import cop5556fa19.AST.ExpFunction;
+import cop5556fa19.AST.ExpFunctionCall;
+import cop5556fa19.AST.ExpInt;
+import cop5556fa19.AST.ExpList;
+import cop5556fa19.AST.ExpName;
+import cop5556fa19.AST.ExpNil;
+import cop5556fa19.AST.ExpString;
+import cop5556fa19.AST.ExpTable;
+import cop5556fa19.AST.ExpTableLookup;
+import cop5556fa19.AST.ExpTrue;
+import cop5556fa19.AST.ExpUnary;
+import cop5556fa19.AST.ExpVarArgs;
+import cop5556fa19.AST.Field;
+import cop5556fa19.AST.FieldExpKey;
+import cop5556fa19.AST.FieldImplicitKey;
+import cop5556fa19.AST.FieldList;
+import cop5556fa19.AST.FieldNameKey;
+import cop5556fa19.AST.FuncBody;
+import cop5556fa19.AST.FuncName;
+import cop5556fa19.AST.Name;
+import cop5556fa19.AST.ParList;
+import cop5556fa19.AST.RetStat;
+import cop5556fa19.AST.Stat;
+import cop5556fa19.AST.StatAssign;
+import cop5556fa19.AST.StatBreak;
+import cop5556fa19.AST.StatDo;
+import cop5556fa19.AST.StatFor;
+import cop5556fa19.AST.StatForEach;
+import cop5556fa19.AST.StatFunction;
+import cop5556fa19.AST.StatGoto;
+import cop5556fa19.AST.StatIf;
+import cop5556fa19.AST.StatLabel;
+import cop5556fa19.AST.StatLocalAssign;
+import cop5556fa19.AST.StatLocalFunc;
+import cop5556fa19.AST.StatRepeat;
+import cop5556fa19.AST.StatWhile;
 import interpreter.built_ins.print;
 import interpreter.built_ins.println;
 import interpreter.built_ins.toNumber;
@@ -27,7 +64,8 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	
 	LuaTable _G; //global environment
-	LuaTable symTable;
+	LuaTable varTable;
+	//Map<LuaValue,LuaValue> varTable;
 	Map<String, List<Stat>> lMap;
 	Map<Stack<Integer>,Map<String, List<Stat>>> symbolTable;
 	Stack<Integer> curstack;
@@ -51,7 +89,8 @@ public class Interpreter extends ASTVisitorAdapter{
 		
 	public Interpreter() {
 		init_G();
-		symTable = new LuaTable();
+		varTable = new LuaTable();
+		//varTable = new HashMap<LuaValue, LuaValue>();
 		initializeSymbolTable();
 	}
 	
@@ -319,33 +358,37 @@ public class Interpreter extends ASTVisitorAdapter{
 
 	@Override
 	public Object visitStatAssign(StatAssign statAssign, Object arg) throws Exception {
-		if(statAssign.varList.size() == statAssign.expList.size()) {
-			List<LuaValue> expList = visitExpList(statAssign.expList, arg);
-			int count = 0;
-			for(Exp var : statAssign.varList) {
-				if(var instanceof ExpName) {
-					ExpName expName = (ExpName)var;
-
-					symTable.put(new LuaString(expName.name), expList.get(count++));
-					
-				} else if(var instanceof ExpTableLookup) {
-					ExpTableLookup expTableLookup = (ExpTableLookup)var;
-					LuaTable table = (LuaTable)visitExp(expTableLookup.table, arg);
-					if(table == null)
-						throw new StaticSemanticException(expTableLookup.firstToken, "Invalid table for lookup.");
-					
-					if(table instanceof LuaTable) {
-						LuaTable ltable = (LuaTable)table;
-						ltable.put(visitExp(expTableLookup.key, arg), expList.get(count++));
-						symTable.put((LuaValue)visitExp(expTableLookup.table, arg), ltable);
+		try{
+			if(statAssign.varList.size() == statAssign.expList.size()) {
+				List<LuaValue> expList = visitExpList(statAssign.expList, arg);
+				int count = 0;
+				for(Exp var : statAssign.varList) {
+					if(var instanceof ExpName) {
+						ExpName expName = (ExpName)var;
+						LuaValue luaValue = (LuaValue)expName.visit(this, arg);
+						varTable.put(new LuaString(expName.name), expList.get(count++));
+						
+					} else if(var instanceof ExpTableLookup) {
+						ExpTableLookup expTableLookup = (ExpTableLookup)var;
+						LuaTable table = (LuaTable)visitExp(expTableLookup.table, arg);
+						if(table == null)
+							throw new StaticSemanticException(expTableLookup.firstToken, "Invalid table for lookup.");
+						
+						if(table instanceof LuaTable) {
+							LuaTable ltable = (LuaTable)table;
+							ltable.put(visitExp(expTableLookup.key, arg), expList.get(count++));
+							varTable.put((LuaValue)visitExp(expTableLookup.table, arg), ltable);
+						}
+					} else {
+						throw new StaticSemanticException(var.firstToken, "Expected variable.");
 					}
-				} else {
-					throw new StaticSemanticException(var.firstToken, "Expected variable.");
 				}
-			}
 			
-		}else {
-			throw new StaticSemanticException(statAssign.firstToken, "Number of variables does not match the left hand side.");
+			}else {
+				throw new StaticSemanticException(statAssign.firstToken, "Number of variables does not match the left hand side.");
+			}
+		} catch (Exception e) {
+			throw new StaticSemanticException(statAssign.firstToken, "Invalid Lookup");
 		}
 		return null;
 	}
@@ -365,22 +408,26 @@ public class Interpreter extends ASTVisitorAdapter{
 	@Override
 	public LuaValue visitExpName(ExpName expName, Object arg) throws StaticSemanticException {
 		LuaString luaString = new LuaString(expName.name);
-		LuaValue luaValue = symTable.get(luaString);
-		//if(luaValue == LuaNil.nil) {
-		//	throw new StaticSemanticException(expName.firstToken, "Variable not initalized");
-		//}
+		LuaValue luaValue = varTable.get(luaString);
 		return luaValue;
 	}
 
 	@Override
-	public LuaValue visitExpTableLookup(ExpTableLookup expTableLookup, Object arg) throws Exception {
+	public LuaValue visitExpTableLookup(ExpTableLookup expTableLookup, Object arg) throws StaticSemanticException {
 		try{
-			LuaTable table = (LuaTable) symTable.get((LuaValue)visitExp(expTableLookup.table, arg));
+			LuaTable tableName = (LuaTable)visitExp(expTableLookup.table, arg);
+			LuaValue keyValue = (LuaValue)visitExp(expTableLookup.key, arg);
+			if(tableName instanceof LuaTable) {
+				return ((LuaTable) tableName).get(keyValue);
+			}
+			
+			/*LuaTable table = (LuaTable) varTable.get(tableName);
 			if(table == null || table == LuaNil.nil)
 				throw new StaticSemanticException(expTableLookup.firstToken, "Invalid table for lookup.");
 
-			return table.get(visitExp(expTableLookup.key, arg));
-		} catch (ClassCastException e) {
+			return table.get(visitExp(expTableLookup.key, arg));*/
+			throw new StaticSemanticException(expTableLookup.firstToken, "Invalid lookup");
+		} catch (Exception e) {
 			throw new StaticSemanticException(expTableLookup.firstToken, "Invalid lookup");
 		}
 	}
@@ -428,6 +475,12 @@ public class Interpreter extends ASTVisitorAdapter{
 		} else if((e0 instanceof LuaString) && (e1 instanceof LuaString)) {
 			return executeOperations((LuaString)e0, (LuaString)e1, opKind);
 			
+		}else if(opKind==Kind.DOTDOT) {
+			if((e0 instanceof LuaString) && (e1 instanceof LuaInt)) {
+				return executeOperations((LuaString)e0, new LuaString(String.valueOf(((LuaInt)e1).v)), opKind);
+			}else if((e0 instanceof LuaInt) && (e1 instanceof LuaString)) {
+				return executeOperations(new LuaString(String.valueOf(((LuaInt)e0).v)), (LuaString)e1, opKind);
+			}
 		} else if((e0 instanceof LuaString) && (e1 instanceof LuaInt)) {
 			return executeOperations(new LuaInt(Integer.parseInt(((LuaString)e0).value)), (LuaInt)e1, opKind);
 			
@@ -450,6 +503,9 @@ public class Interpreter extends ASTVisitorAdapter{
 			LuaInt luaInt = (LuaInt)e;
 			if(opKind == Kind.OP_MINUS)
 				return new LuaInt(luaInt.v*(-1));
+			else if(opKind == Kind.BIT_XOR) {
+				return new LuaInt(~luaInt.v);
+			}
 			else
 				throw new StaticSemanticException(unExp.firstToken, "Invalid operand");
 			
@@ -644,7 +700,12 @@ public class Interpreter extends ASTVisitorAdapter{
 		} else {
 			throw new StaticSemanticException(expFunctionCall.firstToken, "Function not defined");
 		}
-		return new LuaList(list);
+		if(list.isEmpty())
+			return new LuaNil();
+		else if(list.size()==1)
+			return list.get(0);
+		else
+			return list;
 	}
 
 	@Override
@@ -824,14 +885,11 @@ public class Interpreter extends ASTVisitorAdapter{
 		case OP_MOD:
 			return new LuaInt(e0.v % e1.v);
 		case BIT_AMP:
-			//& to be implemented
-			break;
+			return new LuaInt(e0.v & e1.v);
 		case BIT_XOR:
-			//~ to be implemented
-			break;
+			return new LuaInt(e0.v | e1.v);
 		case BIT_OR:
-			// | to be implemented
-			break;
+			return new LuaInt(e0.v | e1.v);
 		case BIT_SHIFTL:
 			return new LuaInt(e0.v << e1.v);
 		case BIT_SHIFTR:

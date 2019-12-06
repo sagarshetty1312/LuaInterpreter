@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import cop5556fa19.AST.ASTNode;
 import cop5556fa19.AST.Block;
 import cop5556fa19.AST.Chunk;
 import cop5556fa19.AST.Exp;
@@ -26,7 +25,6 @@ import cop5556fa19.AST.ExpFalse;
 import cop5556fa19.AST.ExpFunction;
 import cop5556fa19.AST.ExpFunctionCall;
 import cop5556fa19.AST.ExpInt;
-import cop5556fa19.AST.ExpList;
 import cop5556fa19.AST.ExpName;
 import cop5556fa19.AST.ExpNil;
 import cop5556fa19.AST.ExpString;
@@ -60,7 +58,6 @@ import cop5556fa19.AST.StatRepeat;
 import cop5556fa19.AST.StatWhile;
 import cop5556fa19.Token.Kind;
 import static cop5556fa19.Token.Kind.*;
-import static org.junit.Assert.assertNotNull;
 
 public class Parser {
 
@@ -748,6 +745,7 @@ public class Parser {
 				break;
 			}
 		}
+		//match(RPAREN);
 		
 		return list;
 	}
@@ -803,23 +801,27 @@ public class Parser {
 			return new FieldExpKey(first, key, value);
 			
 		}else if(isKind(NAME)){
-			/*Token t = match(NAME);
-			e0 = new ExpName(t);*/
-			Name name = new Name(first, match(NAME).text);
-			Exp expName = new ExpName(name.name);
 			
-			if(isKind(ASSIGN)) {
-				Token eq = match(ASSIGN);
-				Exp value = null;
-				if(checkIfExpFirst(this.t)) {
-					value = exp();
-				}else {
-					error(t.kind);
+			//Name name = new Name(first, match(NAME).text);
+			//Exp expName = new ExpName(name.name);
+			Exp e0 = exp();
+			if(e0 instanceof ExpName) {
+				if(isKind(ASSIGN)) {
+					Token eq = match(ASSIGN);
+					Exp value = null;
+					if(checkIfExpFirst(this.t)) {
+						value = exp();
+					}else {
+						error(t.kind);
+					}
+					return new FieldNameKey(first, new Name(first,((ExpName) e0).name), value);
+				} else {
+					return new FieldImplicitKey(first, e0);
 				}
-				return new FieldNameKey(first, name, value);
-			} else {
-				return new FieldImplicitKey(first, expName);
+			}else {
+				return new FieldImplicitKey(first, e0);
 			}
+			
 		}else if(checkIfExpFirst(this.t)) {
 				return new FieldImplicitKey(first, exp());
 		}else {

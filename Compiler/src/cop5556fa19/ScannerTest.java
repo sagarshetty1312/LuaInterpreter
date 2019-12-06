@@ -136,5 +136,39 @@ class ScannerTest {
 		show(t= s.getNext());
 		
 	}
+	
+	@Test
+	void failedTest2() throws Exception {
+		Reader r = new StringReader("\"\\aapple \\bbag \\ffood \\ttable\""); 
+		Scanner s = new Scanner(r);
+		Token t;
+		show(t= s.getNext());
+		//System.out.println(t.text);
+		assertEquals(t.text,"\"apple \bbag \ffood 	table\"");
+		
+	}
+	
+	@Test
+	void failedTest0() throws Exception {
+		Reader r = new StringReader("\"\\a \\v\""); 
+		Scanner s = new Scanner(r);
+		Token t;
+		show(t= s.getNext());
+		//System.out.println("::"+t.text+"::");
+		//assertEquals(t.text,"\" \"");
+		assertEquals("\""+(char)7+" "+(char)11+"\"",t.text);
+		
+	}
+	
+	@Test
+	void failedTest1() throws Exception {
+		Reader r = new StringReader("\"\b\\b\f\\f\n\\n\r\\r\t\\t\""); 
+		Scanner s = new Scanner(r);
+		Token t;
+		show(t= s.getNext());
+		//System.out.println("::"+t.text+"::");
+		assertEquals("\"\b\b\f\f\n\n\r\r\t\t\"",t.text);
+		
+	}
 
 }

@@ -163,6 +163,9 @@ public class Scanner {
 				case '"': {state = State.IN_DOUBLE_QUOTES; sb.append((char)ch); getChar();}break;
 				case '\'': {state = State.IN_SINGLE_QUOTES; sb.append((char)ch); getChar();}break;
 				case '0': {t = new Token(INTLIT,"0",pos,line);getChar();}break;
+				case '\\': System.out.println("This???");getChar();
+				//{t = new Token(INTLIT,"0",pos,line);getChar();}
+				break;
 				case  -1: {t = new Token(EOF, "EOF", pos, line);break;
 				}
 				default: {
@@ -290,9 +293,17 @@ public class Scanner {
 			case IN_DOUBLE_QUOTES: {
 				if((ch == 10) || (ch == 13)) line--;
 				switch (ch) {
-				case -1: throw new LexicalException("Could not find matching quote for \'\"\' at Line: "+line+" Pos: "+(pos-sb.length()));
+				/*case -1: throw new LexicalException("Could not find matching quote for \'\"\' at Line: "+line+" Pos: "+(pos-sb.length()));
 				case 10: throw new LexicalException("Could not find matching quote for \'\"\' at Line: "+line+" Pos: "+(pos-sb.length()));
-				case 13: throw new LexicalException("Could not find matching quote for \'\"\' at Line: "+line+" Pos: "+(pos-sb.length()));
+				case 13: throw new LexicalException("Could not find matching quote for \'\"\' at Line: "+line+" Pos: "+(pos-sb.length()));*/
+				case -1: 
+				case 10: 
+				case 13: 
+				case 7:
+				case 8:
+				case 12:
+				case 9:
+				case 11: {sb.append((char)ch); getChar();} break;
 				case '\\': {
 					getChar();
 					switch (ch) {
@@ -310,7 +321,7 @@ public class Scanner {
 							" (valid ones are  \\b  \\t  \\n  \\f  \\r  \\\"  \\'  \\\\ )");
 					}
 				} break;
-				case '"': {
+				case '\"': {
 					sb.append((char)ch);
 					t = new Token(STRINGLIT, sb.toString(), pos, line);
 					sb = new StringBuilder("");
@@ -323,23 +334,28 @@ public class Scanner {
 			case IN_SINGLE_QUOTES: {
 				if((ch == 10) || (ch == 13)) line--;
 				switch (ch) {
-				case -1: throw new LexicalException("Could not find matching quote for \"\'\" at Line: "+line+" Pos: "+(pos-sb.length()));
-				case 10: throw new LexicalException("Could not find matching quote for \"\'\" at Line: "+line+" Pos: "+(pos-sb.length()));
-				case 13: throw new LexicalException("Could not find matching quote for \"\'\" at Line: "+line+" Pos: "+(pos-sb.length()));
+				case -1: 
+				case 10: 
+				case 13: 
+				case 7:
+				case 8:
+				case 12:
+				case 9:
+				case 11: {sb.append((char)ch); getChar();} break;
 				case '\\': { getChar();
 				switch (ch) {
-				case 'a': {sb.append((char)7); getChar();} break;
-				case 'b': {sb.append((char)8); getChar();} break;
-				case 'f': {sb.append((char)12); getChar();} break;
-				case 'n': {sb.append((char)10); getChar();} break;
-				case 'r': {sb.append((char)13); getChar();} break;
-				case 't': {sb.append((char)9); getChar();} break;
-				case 'v':  {sb.append((char)11); getChar();} break;
-				case '\\': {sb.append((char)92); getChar();} break;
-				case '\"': {sb.append((char)ch); getChar();} break;
-				case '\'': {sb.append((char)ch); getChar();} break;
-				default: throw new LexicalException("Invalid escape sequence at Line: "+line+" Pos: "+pos+
-						" (valid ones are  \\b  \\t  \\n  \\f  \\r  \\\"  \\'  \\\\ )");
+					case 'a': {sb.append((char)7); getChar();} break;
+					case 'b': {sb.append((char)8); getChar();} break;
+					case 'f': {sb.append((char)12); getChar();} break;
+					case 'n': {sb.append((char)10); getChar();} break;
+					case 'r': {sb.append((char)13); getChar();} break;
+					case 't': {sb.append((char)9); getChar();} break;
+					case 'v':  {sb.append((char)11); getChar();} break;
+					case '\\': {sb.append((char)92); getChar();} break;
+					case '\"': {sb.append((char)ch); getChar();} break;
+					case '\'': {sb.append((char)ch); getChar();} break;
+					default: throw new LexicalException("Invalid escape sequence at Line: "+line+" Pos: "+pos+
+							" (valid ones are  \\b  \\t  \\n  \\f  \\r  \\\"  \\'  \\\\ )");
 				}
 				} break;
 				case '\'': {

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-import cop5556fa19.AST.ASTNode;
+import cop5556fa19.Token.Kind;
 import cop5556fa19.AST.ASTVisitor;
 import cop5556fa19.AST.Block;
 import cop5556fa19.AST.Chunk;
@@ -49,8 +49,6 @@ import cop5556fa19.AST.StatLocalAssign;
 import cop5556fa19.AST.StatLocalFunc;
 import cop5556fa19.AST.StatRepeat;
 import cop5556fa19.AST.StatWhile;
-import cop5556fa19.Token.Kind;
-import interpreter.StaticSemanticException;
 import interpreter.built_ins.print;
 import interpreter.built_ins.println;
 import interpreter.built_ins.toNumber;

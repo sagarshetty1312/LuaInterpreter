@@ -517,7 +517,7 @@ import interpreter.StaticSemanticException;
 		
 
 		
-		//@Test 
+		@Test 
 		void testSetField1() throws Exception{
 			String input = "a = {1,2,3} t= {a} dummy = print(t[1][3]) return t";
 			//show(input);
@@ -554,6 +554,92 @@ import interpreter.StaticSemanticException;
 			assertThrows(StaticSemanticException.class,()->{
 				List<LuaValue> ret = interpret(input);
 			});
+		}
+		
+		@Test
+		void failedTest0() throws Exception{
+			String input = "x = { \nprint(\n\"This is returning nothing. Should this throw?\"\n) \n} \nreturn x";
+			//show(input);
+			List<LuaValue> ret = interpret(input);
+			List<LuaValue> alist = new ArrayList<LuaValue>();
+			LuaTable ltbl = new LuaTable(); 
+			ltbl.putImplicit(new LuaNil());
+			alist.add(ltbl);
+			assertEquals(alist.toString(),ret.toString());
+		}
+		
+		@Test
+		void failedTest1() throws Exception{
+			String input = "return 1|2&3+4";
+			//show(input);
+			List<LuaValue> ret = interpret(input);
+			//show(ret);		
+			List<LuaValue> expected = makeExpectedWithInts(3);
+			assertEquals(expected,ret);
+		}
+		
+		@Test
+		void failedTest2() throws Exception{
+			String input = "return 1 ~ 2 | 3 & 4";
+			//show(input);
+			List<LuaValue> ret = interpret(input);
+			//show(ret);		
+			List<LuaValue> expected = makeExpectedWithInts(3);
+			assertEquals(expected,ret);
+		}
+		
+		@Test
+		void failedTest3() throws Exception{
+			String input = "a=toNumber(\"2\"); return 1+a";
+			//show(input);
+			List<LuaValue> ret = interpret(input);
+			//show(ret);		
+			List<LuaValue> expected = makeExpectedWithInts(3);
+			assertEquals(expected,ret);
+		}
+		
+		@Test
+		void failedTest4() throws Exception{
+			String input = "a = {1,2,3} t= {a} dummy = print(t[1][3]) return t";
+			List<LuaValue> ret = interpret(input);
+			List<LuaValue> intList = makeExpectedWithInts(1,2,3);
+			LuaTable a = new LuaTable();
+			a.putImplicit(intList.get(0));
+			a.putImplicit(intList.get(1));
+			a.putImplicit(intList.get(2));
+			LuaTable t = new LuaTable();
+			t.putImplicit(a);
+			List<LuaValue> alist = new ArrayList<LuaValue>();
+			alist.add(t);
+			assertEquals(alist.toString(),ret.toString());
+		}
+		
+		@Test
+		void failedTest5() throws Exception{
+			String input = "return 123 .. \" one two three\" ";
+			List<LuaValue> ret = interpret(input);
+			List<LuaValue> alist = new ArrayList<LuaValue>();
+			alist.add(new LuaString("123 one two three"));
+			assertEquals(alist,ret);
+		}
+		
+		@Test
+		void failedTest6() throws Exception{
+			String input = "return (100+20+3) .. \" one two three\" ";
+			List<LuaValue> ret = interpret(input);
+			List<LuaValue> alist = new ArrayList<LuaValue>();
+			alist.add(new LuaString("123 one two three"));
+			assertEquals(alist,ret);
+		}
+		
+		@Test
+		void failedTest7() throws Exception{
+			String input = "a = toNumber(\"33\"); return a";
+			//show(input);
+			List<LuaValue> ret = interpret(input);
+			//show(ret);		
+			List<LuaValue> expected = makeExpectedWithInts(33);
+			assertEquals(expected,ret);
 		}
 		
 
